@@ -20,7 +20,7 @@ import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const API_BASE_URL = 'http://172.18.100.33:8000';
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const EXPORT_SECTIONS = ['work_orders', 'assets', 'asset_status', 'parts', 'part_transactions', 'vendors'];
 

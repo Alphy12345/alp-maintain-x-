@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Button, Badge, Modal } from '../components';
 import useStore from '../store/useStore';
 
-const API_BASE_URL = 'http://172.18.100.33:8000';
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const normalizeStatus = (raw) => {
   const s = String(raw || '').trim().toLowerCase();
@@ -256,6 +256,31 @@ const WorkOrders = () => {
         const vendorId = wo.vendor_id ?? wo.vendorId ?? '';
         const partFromArray = Array.isArray(wo.parts) && wo.parts.length > 0 ? wo.parts[0] : null;
         const partId = (partFromArray?.id ?? (Array.isArray(wo.part_ids) ? wo.part_ids[0] : (wo.part_id ?? wo.partId ?? wo.part ?? '')));
+        const recurrence = wo.recurrence || 'does_not_repeat';
+        const baseForDefaults = startIso ? new Date(startIso) : (scheduledIso ? new Date(scheduledIso) : (dueIso ? new Date(dueIso) : new Date()));
+        const dayOfMonthDefault = baseForDefaults.getDate();
+        const weekdayKeyMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const weekdayDefault = weekdayKeyMap[baseForDefaults.getDay()] || 'mon';
+
+        const normalizeDayKeys = (val) => {
+          const list = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',') : []);
+          const cleaned = list
+            .map((x) => String(x || '').trim().toLowerCase())
+            .map((x) => (x.startsWith('thu') ? 'thu' : x))
+            .filter(Boolean);
+          const valid = new Set(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']);
+          const out = cleaned.filter((k) => valid.has(k));
+          return out.length ? out : [];
+        };
+
+        const recurrenceDays = normalizeDayKeys(wo.recurrence_days ?? wo.recurrenceDays);
+        const recurrenceIntervalWeeks = wo.recurrence_interval_weeks ?? wo.recurrenceIntervalWeeks;
+        const recurrenceIntervalMonths = wo.recurrence_interval_months ?? wo.recurrenceIntervalMonths;
+        const recurrenceIntervalYears = wo.recurrence_interval_years ?? wo.recurrenceIntervalYears;
+        const recurrenceDayOfMonth = wo.recurrence_day_of_month ?? wo.recurrenceDayOfMonth;
+        const recurrenceWeekOfMonth = wo.recurrence_week_of_month ?? wo.recurrenceWeekOfMonth;
+        const recurrenceWeekday = wo.recurrence_weekday ?? wo.recurrenceWeekday;
+
         return {
           id: idStr,
           title: wo.name || '',
@@ -264,7 +289,14 @@ const WorkOrders = () => {
           dueDate: dueIso,
           startDate: startIso,
           scheduledDate: scheduledIso,
-          recurrence: wo.recurrence || 'does_not_repeat',
+          recurrence,
+          recurrenceDays: recurrenceDays.length ? recurrenceDays : (recurrence === 'daily' ? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] : (recurrence === 'weekly' ? [weekdayDefault] : [])),
+          recurrenceIntervalWeeks: Math.max(1, parseInt(String(recurrenceIntervalWeeks || 1), 10) || 1),
+          recurrenceIntervalMonths: Math.max(1, parseInt(String(recurrenceIntervalMonths || 1), 10) || 1),
+          recurrenceIntervalYears: Math.max(1, parseInt(String(recurrenceIntervalYears || 1), 10) || 1),
+          recurrenceDayOfMonth: Math.min(31, Math.max(1, parseInt(String(recurrenceDayOfMonth || dayOfMonthDefault), 10) || dayOfMonthDefault)),
+          recurrenceWeekOfMonth: Math.min(5, Math.max(1, parseInt(String(recurrenceWeekOfMonth || 1), 10) || 1)),
+          recurrenceWeekday: String(recurrenceWeekday || weekdayDefault),
           workType: wo.work_type || 'reactive',
           priority: wo.priority || 'low',
           locationId: wo.location || '',
@@ -623,6 +655,215 @@ const WorkOrders = () => {
     return x;
   };
 
+  const sameDay = (a, b) => (
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  );
+
+  const addMonths = (d, months) => {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = x.getDate();
+    x.setDate(1);
+    x.setMonth(x.getMonth() + Number(months || 0));
+    const maxDay = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate();
+    x.setDate(Math.min(day, maxDay));
+    return x;
+  };
+
+  const getNthWeekdayOfMonth = (year, monthIndex, weekdayIndex, nth) => {
+    const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+    if (nth === 5) {
+      // last
+      for (let day = lastDay; day >= 1; day -= 1) {
+        const d = new Date(year, monthIndex, day);
+        if (d.getDay() === weekdayIndex) return d;
+      }
+      return null;
+    }
+
+    let count = 0;
+    for (let day = 1; day <= lastDay; day += 1) {
+      const d = new Date(year, monthIndex, day);
+      if (d.getDay() === weekdayIndex) {
+        count += 1;
+        if (count === nth) return d;
+      }
+    }
+    return null;
+  };
+
+  const getOccurrencesInRange = (wo, rangeStart, rangeEnd) => {
+    const anchor = getCalendarDateForWorkOrder(wo);
+    if (!anchor) return [];
+
+    const start = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+    const end = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate());
+    const anchorDay = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+
+    const rec = String(wo?.recurrence || 'does_not_repeat');
+    const out = [];
+    const pushIfIn = (d) => {
+      if (!d) return;
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      if (dd.getTime() < start.getTime() || dd.getTime() > end.getTime()) return;
+      if (dd.getTime() < anchorDay.getTime()) return;
+      out.push(dd);
+    };
+
+    if (rec === 'does_not_repeat') {
+      pushIfIn(anchorDay);
+      return out;
+    }
+
+    // Daily
+    if (rec === 'daily') {
+      const interval = Math.max(1, parseInt(String(wo?.recurrenceIntervalDays || 1), 10) || 1);
+      const dayKeys = Array.isArray(wo?.recurrenceDays) && wo.recurrenceDays.length
+        ? wo.recurrenceDays
+        : ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const allowed = new Set(dayKeys);
+      const weekdayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+      let d = new Date(Math.max(start.getTime(), anchorDay.getTime()));
+      const delta = Math.max(0, diffDays(anchorDay, d));
+      const offset = delta % interval;
+      if (offset !== 0) d = addDays(d, interval - offset);
+
+      let guard = 0;
+      while (d.getTime() <= end.getTime() && guard < 400) {
+        const k = weekdayMap[d.getDay()];
+        if (allowed.has(k)) pushIfIn(d);
+        d = addDays(d, interval);
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Weekly
+    if (rec === 'weekly') {
+      const intervalWeeks = Math.max(1, parseInt(String(wo?.recurrenceIntervalWeeks || 1), 10) || 1);
+      const days = Array.isArray(wo?.recurrenceDays) && wo.recurrenceDays.length ? wo.recurrenceDays : ['mon'];
+      const weekdayIndexMap = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+      const week0 = startOfWeekMonday(anchorDay);
+      const startWeek = startOfWeekMonday(new Date(Math.max(start.getTime(), anchorDay.getTime())));
+      const weeksBetween = Math.floor(diffDays(week0, startWeek) / 7);
+      const offsetWeeks = ((weeksBetween % intervalWeeks) + intervalWeeks) % intervalWeeks;
+      const firstWeek = offsetWeeks === 0 ? startWeek : addDays(startWeek, (intervalWeeks - offsetWeeks) * 7);
+
+      let wk = new Date(firstWeek);
+      let guard = 0;
+      while (wk.getTime() <= end.getTime() && guard < 200) {
+        for (const k of days) {
+          const targetDow = weekdayIndexMap[String(k || '').toLowerCase()] ?? 1;
+          // wk is Monday-start
+          const d = addDays(wk, (targetDow + 6) % 7);
+          pushIfIn(d);
+        }
+        wk = addDays(wk, intervalWeeks * 7);
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Monthly by date
+    if (rec === 'monthly_by_date') {
+      const intervalMonths = Math.max(1, parseInt(String(wo?.recurrenceIntervalMonths || 1), 10) || 1);
+      const dom = Math.min(31, Math.max(1, parseInt(String(wo?.recurrenceDayOfMonth || anchorDay.getDate()), 10) || anchorDay.getDate()));
+
+      const anchorMonthStart = new Date(anchorDay.getFullYear(), anchorDay.getMonth(), 1);
+      let curMonthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+      if (curMonthStart.getTime() < anchorMonthStart.getTime()) curMonthStart = anchorMonthStart;
+
+      const monthsBetween = (curMonthStart.getFullYear() - anchorMonthStart.getFullYear()) * 12 + (curMonthStart.getMonth() - anchorMonthStart.getMonth());
+      const offset = ((monthsBetween % intervalMonths) + intervalMonths) % intervalMonths;
+      if (offset !== 0) curMonthStart = addMonths(curMonthStart, intervalMonths - offset);
+
+      let guard = 0;
+      while (curMonthStart.getTime() <= end.getTime() && guard < 200) {
+        const maxDay = new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() + 1, 0).getDate();
+        const d = new Date(curMonthStart.getFullYear(), curMonthStart.getMonth(), Math.min(dom, maxDay));
+        pushIfIn(d);
+        curMonthStart = addMonths(curMonthStart, intervalMonths);
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Monthly by weekday
+    if (rec === 'monthly_by_weekday') {
+      const intervalMonths = Math.max(1, parseInt(String(wo?.recurrenceIntervalMonths || 1), 10) || 1);
+      const nth = Math.min(5, Math.max(1, parseInt(String(wo?.recurrenceWeekOfMonth || 1), 10) || 1));
+      const weekdayIndexMap = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+      const weekdayKey = String(wo?.recurrenceWeekday || 'mon').toLowerCase();
+      const weekdayIdx = weekdayIndexMap[weekdayKey] ?? 1;
+
+      const anchorMonthStart = new Date(anchorDay.getFullYear(), anchorDay.getMonth(), 1);
+      let curMonthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+      if (curMonthStart.getTime() < anchorMonthStart.getTime()) curMonthStart = anchorMonthStart;
+
+      const monthsBetween = (curMonthStart.getFullYear() - anchorMonthStart.getFullYear()) * 12 + (curMonthStart.getMonth() - anchorMonthStart.getMonth());
+      const offset = ((monthsBetween % intervalMonths) + intervalMonths) % intervalMonths;
+      if (offset !== 0) curMonthStart = addMonths(curMonthStart, intervalMonths - offset);
+
+      let guard = 0;
+      while (curMonthStart.getTime() <= end.getTime() && guard < 200) {
+        const d = getNthWeekdayOfMonth(curMonthStart.getFullYear(), curMonthStart.getMonth(), weekdayIdx, nth);
+        pushIfIn(d);
+        curMonthStart = addMonths(curMonthStart, intervalMonths);
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Quarterly (every 3 months from anchor)
+    if (rec === 'quarterly') {
+      const interval = 3;
+      const anchorMonthStart = new Date(anchorDay.getFullYear(), anchorDay.getMonth(), 1);
+      let curMonthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+      if (curMonthStart.getTime() < anchorMonthStart.getTime()) curMonthStart = anchorMonthStart;
+
+      const monthsBetween = (curMonthStart.getFullYear() - anchorMonthStart.getFullYear()) * 12 + (curMonthStart.getMonth() - anchorMonthStart.getMonth());
+      const offset = ((monthsBetween % interval) + interval) % interval;
+      if (offset !== 0) curMonthStart = addMonths(curMonthStart, interval - offset);
+
+      const dom = anchorDay.getDate();
+      let guard = 0;
+      while (curMonthStart.getTime() <= end.getTime() && guard < 100) {
+        const maxDay = new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() + 1, 0).getDate();
+        pushIfIn(new Date(curMonthStart.getFullYear(), curMonthStart.getMonth(), Math.min(dom, maxDay)));
+        curMonthStart = addMonths(curMonthStart, interval);
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Yearly
+    if (rec === 'yearly') {
+      const intervalYears = Math.max(1, parseInt(String(wo?.recurrenceIntervalYears || 1), 10) || 1);
+      const monthIndex = anchorDay.getMonth();
+      const dom = anchorDay.getDate();
+
+      let year = Math.max(anchorDay.getFullYear(), start.getFullYear());
+      const yearsBetween = year - anchorDay.getFullYear();
+      const offset = ((yearsBetween % intervalYears) + intervalYears) % intervalYears;
+      if (offset !== 0) year += intervalYears - offset;
+
+      let guard = 0;
+      while (year <= end.getFullYear() && guard < 50) {
+        const maxDay = new Date(year, monthIndex + 1, 0).getDate();
+        const d = new Date(year, monthIndex, Math.min(dom, maxDay));
+        pushIfIn(d);
+        year += intervalYears;
+        guard += 1;
+      }
+      return out;
+    }
+
+    // Fallback
+    pushIfIn(anchorDay);
+    return out;
+  };
+
   const calendarDays = useMemo(() => {
     if (calendarMode === 'week') {
       const start = startOfWeekMonday(calendarAnchorDate);
@@ -644,16 +885,29 @@ const WorkOrders = () => {
 
   const workOrdersByDay = useMemo(() => {
     const map = new Map();
+    const days = Array.isArray(calendarDays) ? calendarDays : [];
+    if (!days.length) return map;
+
+    const rangeStart = new Date(days[0].getFullYear(), days[0].getMonth(), days[0].getDate());
+    const rangeEnd = new Date(days[days.length - 1].getFullYear(), days[days.length - 1].getMonth(), days[days.length - 1].getDate());
+
     (filteredWorkOrders || []).forEach((wo) => {
-      const d = getCalendarDateForWorkOrder(wo);
-      if (!d) return;
-      const key = dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-      const cur = map.get(key) || [];
-      cur.push(wo);
-      map.set(key, cur);
+      const occ = getOccurrencesInRange(wo, rangeStart, rangeEnd);
+      occ.forEach((d) => {
+        const key = dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        const cur = map.get(key) || [];
+        cur.push({ ...wo, __occKey: `${wo.id}-${key}` });
+        map.set(key, cur);
+      });
     });
+
+    // stable ordering within a day
+    for (const [k, list] of map.entries()) {
+      map.set(k, (list || []).slice().sort((a, b) => String(a?.priority || '').localeCompare(String(b?.priority || ''))));
+    }
+
     return map;
-  }, [filteredWorkOrders]);
+  }, [filteredWorkOrders, calendarDays]);
 
   const toDateOnlyIso = (d) => {
     const y = d.getFullYear();
@@ -675,23 +929,26 @@ const WorkOrders = () => {
     return dt.toISOString();
   };
 
-  const addDays = (date, days) => {
+  function addDays(date, days) {
     const d = new Date(date);
     d.setDate(d.getDate() + Number(days || 0));
     return d;
-  };
+  }
 
-  const diffDays = (a, b) => {
+  function diffDays(a, b) {
     const a0 = new Date(a.getFullYear(), a.getMonth(), a.getDate());
     const b0 = new Date(b.getFullYear(), b.getMonth(), b.getDate());
     const ms = b0.getTime() - a0.getTime();
     return Math.round(ms / (24 * 60 * 60 * 1000));
-  };
+  }
 
-  const formatShort = (iso) => {
+  const formatShort = (iso, style = 'month_day') => {
     const d = parseIsoToDate(iso);
     if (!d) return '';
     try {
+      if (style === 'weekday_day') {
+        return d.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit' });
+      }
       return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
     } catch {
       return '';
@@ -1845,7 +2102,7 @@ const WorkOrders = () => {
                   data-cal-dateiso={dateIso}
                   data-cal-dateonly={key}
                   className={`min-h-[140px] border-r border-b border-gray-200 p-2 transition-colors ${
-                    inMonth ? 'bg-white' : 'bg-gray-50/60'
+                    'bg-white'
                   } ${isDropTarget ? 'bg-primary-50' : ''}`}
                 >
                   <div className="flex items-center justify-between">
@@ -1854,11 +2111,12 @@ const WorkOrders = () => {
                       <div className="text-[11px] text-gray-500">{items.length}</div>
                     ) : null}
                   </div>
-                  <div className="mt-2 space-y-1">
-                    {items.slice(0, 4).map((wo) => (
+                  <div className="mt-2 space-y-1 max-h-[110px] overflow-y-auto pr-1">
+                    {items.map((wo) => (
                       <button
-                        key={wo.id}
+                        key={wo.__occKey || wo.id}
                         type="button"
+                        title={`Work Order: ${String(wo.title || wo.id)}\nStart: ${formatShort(wo?.startDate || wo?.scheduledDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}\nDue: ${formatShort(wo?.dueDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}\nPriority: ${String(wo.priority || '—')}`}
                         onPointerDown={(e) => {
                           if (viewMode !== 'calendar') return;
                           e.preventDefault();
@@ -1897,24 +2155,21 @@ const WorkOrders = () => {
                           window.addEventListener('pointercancel', onCalendarPointerUp);
                         }}
                         style={{ touchAction: 'none' }}
-                        className={`w-full text-left px-2 py-1 rounded border bg-white hover:bg-gray-50 transition-colors border-gray-200 cursor-grab active:cursor-grabbing ${
+                        className={`relative group w-full text-left px-2 py-1 rounded border bg-white hover:bg-gray-50 transition-colors border-gray-200 cursor-grab active:cursor-grabbing ${
                           dragUi?.dragging && String(dragUi?.workOrderId || '') === String(wo.id) ? 'opacity-0' : ''
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-medium text-gray-900 truncate">{wo.title || wo.id}</div>
-                          <div className="shrink-0">{getPriorityBadge(wo.priority)}</div>
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-gray-500">
-                          <span className="font-medium">Start:</span> {formatShort(wo?.startDate || wo?.scheduledDate) || '—'}
-                          {'  '}
-                          <span className="font-medium">Due:</span> {formatShort(wo?.dueDate) || '—'}
+                        <div className="text-xs font-medium text-gray-900 truncate">{wo.title || wo.id}</div>
+                        <div className="hidden group-hover:block absolute z-50 left-0 top-full mt-1 w-64 rounded-md border border-gray-200 bg-white shadow-lg p-2">
+                          <div className="text-xs font-semibold text-gray-900 truncate">{wo.title || wo.id}</div>
+                          <div className="mt-1 text-[11px] text-gray-600">
+                            <div><span className="font-medium">Start:</span> {formatShort(wo?.startDate || wo?.scheduledDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
+                            <div><span className="font-medium">Due:</span> {formatShort(wo?.dueDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
+                            <div className="mt-1"><span className="font-medium">Priority:</span> {String(wo.priority || '—')}</div>
+                          </div>
                         </div>
                       </button>
                     ))}
-                    {items.length > 4 ? (
-                      <div className="text-[11px] text-gray-500">+{items.length - 4} more</div>
-                    ) : null}
                   </div>
                 </div>
               );
@@ -2609,6 +2864,18 @@ const WorkOrders = () => {
                         <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
+                    <span className="text-gray-500">
+                      {(() => {
+                        const day = Math.min(31, Math.max(1, parseInt(String(createForm.recurrenceDayOfMonth || 1), 10) || 1));
+                        const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
+                        const d = new Date(base.getFullYear(), base.getMonth(), day);
+                        try {
+                          return d.toLocaleDateString(undefined, { weekday: 'long' });
+                        } catch {
+                          return '';
+                        }
+                      })()}
+                    </span>
                   </div>
 
                   <div className="mt-2 text-xs text-gray-500">
@@ -2627,7 +2894,10 @@ const WorkOrders = () => {
                       };
                       const ordinal = `${day}${suffix(day)}`;
                       const intervalText = interval === 1 ? 'every month' : `every ${interval} months`;
-                      return `Repeats ${intervalText} on the ${ordinal} day of the month after completion of this Work Order.`;
+                      const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
+                      const d = new Date(base.getFullYear(), base.getMonth(), day);
+                      const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
+                      return `Repeats ${intervalText} on ${weekday} the ${ordinal} after completion of this Work Order.`;
                     })()}
                   </div>
                 </div>
@@ -2716,9 +2986,9 @@ const WorkOrders = () => {
                       const interval = Math.max(1, parseInt(String(createForm.recurrenceIntervalYears || 1), 10) || 1);
                       const intervalText = interval === 1 ? 'every year' : `every ${interval} years`;
                       const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
-                      const day = String(base.getDate()).padStart(2, '0');
-                      const month = String(base.getMonth() + 1).padStart(2, '0');
-                      return `Repeats ${intervalText} on ${day}/${month} after completion of this Work Order.`;
+                      const day = base.getDate();
+                      const month = base.toLocaleDateString(undefined, { month: 'long' });
+                      return `Repeats ${intervalText} on ${month} ${day} after completion of this Work Order.`;
                     })()}
                   </div>
                 </div>

@@ -11,7 +11,7 @@ import {
 import axios from 'axios';
 import { Button, Card, Modal } from '../components';
 
-const API_BASE_URL = 'http://172.18.100.33:8000';
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const chipBase =
   'inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50';

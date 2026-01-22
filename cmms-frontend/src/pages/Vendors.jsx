@@ -4,7 +4,7 @@ import { Search, Plus, BookUser } from 'lucide-react';
 import axios from 'axios';
 import { Button } from '../components';
 
-const API_BASE_URL = 'http://172.18.100.33:8000';
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const Vendors = () => {
   const navigate = useNavigate();
