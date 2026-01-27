@@ -6,7 +6,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from db import get_db
-from models.models import Category, Part, Procedure, User, Vendor, WorkOrder, WorkOrderPart
+from models.models import (
+    Category,
+    Part,
+    Procedure,
+    ProcedureExecution,
+    ProcedureField,
+    ProcedureFieldValue,
+    User,
+    Vendor,
+    WorkOrder,
+    WorkOrderPart,
+)
 from routes.auth import get_current_user
 from pydantic_schema.request import WorkOrderCreate, WorkOrderUpdate
 from pydantic_schema.response import WorkOrderOut
@@ -87,6 +98,57 @@ def get_work_order(work_order_id: int, db: Session = Depends(get_db)):
     if not work_order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work order not found")
     return work_order
+
+
+@router.get("/{work_order_id}/procedure-progress")
+def work_order_procedure_progress(
+    work_order_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    work_order = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work order not found")
+
+    procedure_id = work_order.procedure_id
+    if not procedure_id:
+        return {"completed": 0, "total": 0}
+
+    total = db.query(ProcedureField).join(ProcedureField.section).join(Procedure).filter(Procedure.id == procedure_id).count()
+
+    execution = (
+        db.query(ProcedureExecution)
+        .filter(ProcedureExecution.work_order_id == work_order.id)
+        .filter(ProcedureExecution.procedure_id == procedure_id)
+        .order_by(ProcedureExecution.id.desc())
+        .first()
+    )
+
+    if not execution:
+        return {"completed": 0, "total": total}
+
+    rows = (
+        db.query(ProcedureFieldValue, ProcedureField)
+        .join(ProcedureField, ProcedureField.id == ProcedureFieldValue.field_id)
+        .filter(ProcedureFieldValue.execution_id == execution.id)
+        .all()
+    )
+
+    completed = 0
+    for fv, f in rows:
+        t = (getattr(f, "field_type", "") or "").strip().lower()
+        v = (getattr(fv, "value", None) or "").strip()
+        if t in {"checkbox", "check"}:
+            if v.lower() in {"true", "1", "yes", "y"}:
+                completed += 1
+        else:
+            if v:
+                completed += 1
+
+    if completed > total:
+        completed = total
+
+    return {"completed": completed, "total": total}
 
 
 @router.patch("/{work_order_id}", response_model=WorkOrderOut)

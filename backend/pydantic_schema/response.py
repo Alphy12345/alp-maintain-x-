@@ -80,6 +80,15 @@ class PartOut(BaseModel):
         from_attributes = True
 
 
+class WorkOrderPartOut(BaseModel):
+    part_id: int
+    quantity: int
+    part: Optional[PartOut] = None
+
+    class Config:
+        from_attributes = True
+
+
 class TeamOut(BaseModel):
     id: int
     team_name: str
@@ -113,6 +122,7 @@ class WorkOrderOut(BaseModel):
     procedure: Optional["ProcedureOut"] = None
     categories: List[CategoryOut] = []
     parts: List[PartOut] = []
+    work_order_parts: List[WorkOrderPartOut] = []
 
     class Config:
         from_attributes = True

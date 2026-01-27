@@ -4,8 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from db import get_db
-from models.models import Procedure, ProcedureSection, ProcedureField
-from pydantic_schema.request import ProcedureCreate, ProcedureUpdate
+from datetime import date
+
+from models.models import Procedure, ProcedureExecution, ProcedureField, ProcedureFieldValue, ProcedureSection, WorkOrder
+from routes.auth import get_current_user
+from pydantic_schema.request import ProcedureCreate, ProcedureSaveRequest, ProcedureUpdate
 from pydantic_schema.response import ProcedureOut
 
 router = APIRouter(prefix="/procedures", tags=["procedures"])
@@ -43,6 +46,106 @@ def create_procedure(payload: ProcedureCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(procedure)
     return procedure
+
+
+@router.post("/save", status_code=status.HTTP_200_OK)
+def save_procedure_values(
+    payload: ProcedureSaveRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    work_order = db.query(WorkOrder).filter(WorkOrder.id == payload.work_order_id).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work order not found")
+
+    procedure_id = payload.procedure_id or work_order.procedure_id
+    if not procedure_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No procedure assigned to this work order")
+
+    asset_id = work_order.asset_id
+    if not asset_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No asset assigned to this work order")
+
+    execution = (
+        db.query(ProcedureExecution)
+        .filter(ProcedureExecution.work_order_id == work_order.id)
+        .filter(ProcedureExecution.procedure_id == procedure_id)
+        .first()
+    )
+
+    if not execution:
+        execution = ProcedureExecution(
+            work_order_id=work_order.id,
+            procedure_id=procedure_id,
+            asset_id=asset_id,
+            performed_by=current_user.id,
+            performed_at=date.today(),
+            status=payload.status or "in_progress",
+        )
+        db.add(execution)
+        db.commit()
+        db.refresh(execution)
+    else:
+        execution.status = payload.status or execution.status
+        execution.performed_by = execution.performed_by or current_user.id
+        execution.performed_at = execution.performed_at or date.today()
+        db.commit()
+
+    saved = 0
+    for item in payload.values or []:
+        field = db.query(ProcedureField).filter(ProcedureField.id == item.field_id).first()
+        if not field:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Field not found: {item.field_id}")
+
+        existing = (
+            db.query(ProcedureFieldValue)
+            .filter(ProcedureFieldValue.execution_id == execution.id)
+            .filter(ProcedureFieldValue.field_id == item.field_id)
+            .first()
+        )
+
+        if not existing:
+            existing = ProcedureFieldValue(execution_id=execution.id, field_id=item.field_id, value=item.value)
+            db.add(existing)
+        else:
+            existing.value = item.value
+
+        saved += 1
+
+    db.commit()
+
+    return {"execution_id": execution.id, "saved": saved, "status": execution.status}
+
+
+@router.get("/saved-values/{work_order_id}")
+def get_saved_values(
+    work_order_id: int,
+    procedure_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    work_order = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Work order not found")
+
+    pid = procedure_id or work_order.procedure_id
+    if not pid:
+        return {"execution_id": None, "values": {}}
+
+    execution = (
+        db.query(ProcedureExecution)
+        .filter(ProcedureExecution.work_order_id == work_order.id)
+        .filter(ProcedureExecution.procedure_id == pid)
+        .order_by(ProcedureExecution.id.desc())
+        .first()
+    )
+
+    if not execution:
+        return {"execution_id": None, "values": {}}
+
+    field_values = db.query(ProcedureFieldValue).filter(ProcedureFieldValue.execution_id == execution.id).all()
+    values = {str(fv.field_id): (fv.value or "") for fv in field_values}
+    return {"execution_id": execution.id, "values": values}
 
 
 @router.get("", response_model=List[ProcedureOut])

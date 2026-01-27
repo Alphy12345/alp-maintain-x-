@@ -168,3 +168,15 @@ class ProcedureUpdate(BaseModel):
     description: Optional[str] = None
     asset_id: Optional[int] = None
     sections: Optional[List[ProcedureSectionCreate]] = None
+
+
+class ProcedureFieldValueIn(BaseModel):
+    field_id: int
+    value: Optional[str] = None
+
+
+class ProcedureSaveRequest(BaseModel):
+    work_order_id: int
+    procedure_id: Optional[int] = None
+    status: Optional[str] = "in_progress"
+    values: List[ProcedureFieldValueIn] = []

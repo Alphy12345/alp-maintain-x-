@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { logout } from '../services/auth';
 
 function Tile({ title, value, subtitle }) {
   return (
@@ -12,6 +13,14 @@ function Tile({ title, value, subtitle }) {
       <Text style={styles.tileTitle}>{title}</Text>
       {!!subtitle && <Text style={styles.tileSubtitle}>{subtitle}</Text>}
     </View>
+  );
+}
+
+function TileButton({ title, value, subtitle, onPress }) {
+  return (
+    <Pressable style={styles.tileButton} onPress={onPress}>
+      <Tile title={title} value={value} subtitle={subtitle} />
+    </Pressable>
   );
 }
 
@@ -59,7 +68,7 @@ function normalizeStatus(status) {
 }
 
 export default function OverviewScreen() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const navigation = useNavigation();
 
   const [dueTodayOpen, setDueTodayOpen] = useState(false);
@@ -67,12 +76,42 @@ export default function OverviewScreen() {
   const [dueTodayError, setDueTodayError] = useState('');
   const [dueTodayItems, setDueTodayItems] = useState([]);
 
+  const [allWorkOrdersLoading, setAllWorkOrdersLoading] = useState(false);
+  const [allWorkOrders, setAllWorkOrders] = useState([]);
+
+  const [statusSheetOpen, setStatusSheetOpen] = useState(false);
+  const [statusSheetTitle, setStatusSheetTitle] = useState('');
+  const [statusSheetItems, setStatusSheetItems] = useState([]);
+
   const openDueToday = useCallback(() => {
     setDueTodayOpen(true);
   }, []);
 
+  const loadAllWorkOrders = useCallback(async () => {
+    setAllWorkOrdersLoading(true);
+    try {
+      const res = await api.get('/work-orders');
+      const items = Array.isArray(res?.data) ? res.data : [];
+      setAllWorkOrders(items);
+    } catch (e) {
+      setAllWorkOrders([]);
+    } finally {
+      setAllWorkOrdersLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAllWorkOrders();
+    }, [loadAllWorkOrders])
+  );
+
   const closeDueToday = useCallback(() => {
     setDueTodayOpen(false);
+  }, []);
+
+  const closeStatusSheet = useCallback(() => {
+    setStatusSheetOpen(false);
   }, []);
 
   const openWorkOrder = useCallback(
@@ -108,21 +147,108 @@ export default function OverviewScreen() {
     return dueTodayItems.length;
   }, [dueTodayItems.length]);
 
+  const metrics = useMemo(() => {
+    const items = Array.isArray(allWorkOrders) ? allWorkOrders : [];
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+
+    const highPriority = items.filter((w) => norm(w?.priority) === 'high' || norm(w?.priority) === 'critical').length;
+    const overdue = items.filter((w) => {
+      if (!w?.due_date) return false;
+      const d = new Date(w.due_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      return d < today && norm(w?.status) !== 'done' && norm(w?.status) !== 'completed';
+    }).length;
+    const pendingApproval = 0;
+    const completed7 = items.filter((w) => {
+      const s = norm(w?.status);
+      if (s !== 'done' && s !== 'completed') return false;
+      if (!w?.due_date) return false;
+      const d = new Date(w.due_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = (today - d) / (1000 * 60 * 60 * 24);
+      return diffDays >= 0 && diffDays <= 7;
+    }).length;
+
+    return {
+      highPriority,
+      overdue,
+      pendingApproval,
+      completed7,
+    };
+  }, [allWorkOrders]);
+
+  const completedWorkOrders = useMemo(() => {
+    const items = Array.isArray(allWorkOrders) ? allWorkOrders : [];
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+    return items.filter((w) => {
+      const s = norm(w?.status);
+      return s === 'done' || s === 'completed';
+    });
+  }, [allWorkOrders]);
+
+  const doLogout = useCallback(async () => {
+    await logout();
+    setUser(null);
+  }, [setUser]);
+
+  const openStatusSheet = useCallback(
+    (title, items) => {
+      setStatusSheetTitle(title);
+      setStatusSheetItems(Array.isArray(items) ? items : []);
+      setStatusSheetOpen(true);
+    },
+    []
+  );
+
+  const onPressHighPriority = useCallback(() => {
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+    const items = (allWorkOrders || []).filter((w) => {
+      const p = norm(w?.priority);
+      return p === 'high' || p === 'critical';
+    });
+    openStatusSheet('High Priority Work Orders', items);
+  }, [allWorkOrders, openStatusSheet]);
+
+  const onPressOverdue = useCallback(() => {
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const items = (allWorkOrders || []).filter((w) => {
+      if (!w?.due_date) return false;
+      const d = new Date(w.due_date);
+      d.setHours(0, 0, 0, 0);
+      const st = norm(w?.status);
+      return d < today && st !== 'done' && st !== 'completed';
+    });
+    openStatusSheet('Overdue Work Orders', items);
+  }, [allWorkOrders, openStatusSheet]);
+
+  const onPressPendingApproval = useCallback(() => {
+    openStatusSheet('Requests Pending Approval', []);
+  }, [openStatusSheet]);
+
+  const onPressCompleted7 = useCallback(() => {
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const items = (allWorkOrders || []).filter((w) => {
+      const st = norm(w?.status);
+      if (st !== 'done' && st !== 'completed') return false;
+      if (!w?.due_date) return false;
+      const d = new Date(w.due_date);
+      d.setHours(0, 0, 0, 0);
+      const diffDays = (today - d) / (1000 * 60 * 60 * 24);
+      return diffDays >= 0 && diffDays <= 7;
+    });
+    openStatusSheet('Completed in the Last 7 Days', items);
+  }, [allWorkOrders, openStatusSheet]);
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.topBar}>
-          <View style={styles.topBarSpacer} />
-          <Pressable style={styles.switchOrg}>
-            <Text style={styles.switchOrgText}>Switch Organization</Text>
-            <Text style={styles.switchOrgChevron}>⌄</Text>
-          </Pressable>
-          <Pressable style={styles.accountWrap}>
-            <View style={styles.accountIcon} />
-            <Text style={styles.accountLabel}>Account</Text>
-          </Pressable>
-        </View>
-
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.hello}>Hello{user?.user_name ? `, ${user.user_name}!` : '!'}</Text>
@@ -135,26 +261,32 @@ export default function OverviewScreen() {
           <Text style={styles.quickLabel}>Due Today</Text>
           <Text style={styles.quickMeta}>{dueTodayCount}</Text>
         </Pressable>
-        <Pressable style={styles.quickBtn}>
-          <Text style={styles.quickLabel}>Invite</Text>
-          <Text style={styles.quickMeta}>+</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn}>
-          <Text style={styles.quickLabel}>Scan Code</Text>
-          <Text style={styles.quickMeta}>⌁</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn}>
-          <Text style={styles.quickLabel}>Support</Text>
-          <Text style={styles.quickMeta}>?</Text>
-        </Pressable>
       </View>
 
       <Text style={styles.sectionTitle}>WORK ORDERS STATUS</Text>
       <View style={styles.grid}>
-        <Tile title="High Priority Work Orders" value="0" />
-        <Tile title="Overdue Work Orders" value="0" />
-        <Tile title="Requests Pending Approval" value="0" />
-        <Tile title="Completed in the Last 7 days" value="0" />
+        <TileButton title="High Priority Work Orders" value={String(metrics.highPriority)} onPress={onPressHighPriority} />
+        <TileButton title="Overdue Work Orders" value={String(metrics.overdue)} onPress={onPressOverdue} />
+        <TileButton title="Requests Pending Approval" value={String(metrics.pendingApproval)} onPress={onPressPendingApproval} />
+        <TileButton title="Completed in the Last 7 days" value={String(metrics.completed7)} onPress={onPressCompleted7} />
+      </View>
+
+      <Text style={styles.sectionTitle}>COMPLETED WORK ORDERS</Text>
+      <View style={styles.todoCard}>
+        {allWorkOrdersLoading ? (
+          <Text style={styles.todoSubtitle}>Loading…</Text>
+        ) : completedWorkOrders.length === 0 ? (
+          <Text style={styles.todoSubtitle}>No completed work orders</Text>
+        ) : (
+          completedWorkOrders.slice(0, 8).map((wo) => (
+            <Pressable key={String(wo?.id)} style={styles.completedRow} onPress={() => openWorkOrder(wo?.id)}>
+              <Text style={styles.completedTitle} numberOfLines={1}>
+                {wo?.name || 'Work Order'}
+              </Text>
+              <Text style={styles.completedMeta}>#{wo?.id ?? '-'}</Text>
+            </Pressable>
+          ))
+        )}
       </View>
 
       <Text style={styles.sectionTitle}>TO DO LIST</Text>
@@ -163,7 +295,12 @@ export default function OverviewScreen() {
         <Text style={styles.todoSubtitle}>No items</Text>
       </View>
 
-        <View style={{ height: 18 }} />
+      <View style={{ height: 18 }} />
+
+      <Pressable style={styles.logoutBtn} onPress={doLogout}>
+        <Text style={styles.logoutText}>Logout</Text>
+      </Pressable>
+
       </ScrollView>
 
       <Modal
@@ -204,8 +341,65 @@ export default function OverviewScreen() {
                 <Text style={styles.sheetHint}>No work orders due today.</Text>
               </View>
             ) : (
-              <ScrollView contentContainerStyle={styles.sheetList}>
+              <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetList}>
                 {dueTodayItems.map((wo) => {
+                  const statusMeta = normalizeStatus(wo?.status);
+                  const prMeta = normalizePriority(wo?.priority);
+                  return (
+                    <Pressable
+                      key={wo?.id?.toString?.() || String(Math.random())}
+                      style={styles.woCard}
+                      onPress={() => openWorkOrder(wo?.id)}
+                    >
+                      <Text style={styles.woTitle} numberOfLines={2}>
+                        {wo?.name || 'Work Order'}
+                      </Text>
+                      <View style={styles.woMetaRow}>
+                        <Text style={styles.woId}>#{wo?.id ?? '-'}</Text>
+                        <View style={styles.woPills}>
+                          <Pill label={statusMeta.label} tone={statusMeta.tone} />
+                          {!!wo?.priority && <Pill label={prMeta.label} tone={prMeta.tone} />}
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={statusSheetOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeStatusSheet}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={closeStatusSheet} />
+        <View style={styles.sheetWrap}>
+          <View style={styles.sheetCard}>
+            <View style={styles.sheetHeader}>
+              <View style={styles.sheetHeaderLeft}>
+                <View style={styles.calendarIcon}>
+                  <Text style={styles.calendarIconText}>▦</Text>
+                </View>
+                <Text style={styles.sheetTitle} numberOfLines={1}>
+                  {statusSheetTitle}
+                </Text>
+              </View>
+              <Pressable onPress={closeStatusSheet} style={styles.sheetClose}>
+                <Text style={styles.sheetCloseText}>×</Text>
+              </Pressable>
+            </View>
+
+            {statusSheetItems.length === 0 ? (
+              <View style={styles.sheetEmpty}>
+                <Text style={styles.sheetHint}>No work orders</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetList}>
+                {statusSheetItems.map((wo) => {
                   const statusMeta = normalizeStatus(wo?.status);
                   const prMeta = normalizePriority(wo?.priority);
                   return (
@@ -245,46 +439,8 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 86,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 8,
-    marginBottom: 14,
-  },
-  topBarSpacer: {
-    width: 64,
-  },
-  switchOrg: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  switchOrgText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  switchOrgChevron: {
-    fontSize: 14,
-    color: '#2563eb',
-    marginTop: -2,
-  },
-  accountWrap: {
-    alignItems: 'center',
-    width: 64,
-  },
-  accountIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#2563eb',
-    marginBottom: 4,
-  },
-  accountLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#111827',
+  tileButton: {
+    width: '47%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -344,7 +500,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   tile: {
-    width: '47%',
+    width: '100%',
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 14,
@@ -385,6 +541,35 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
+  completedRow: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eef2f7',
+  },
+  completedTitle: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  completedMeta: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+
+  logoutBtn: {
+    backgroundColor: '#111827',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
   sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(17, 24, 39, 0.45)',
@@ -402,7 +587,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    maxHeight: '72%',
+    height: '52%',
+    minHeight: '52%',
+  },
+
+  sheetScroll: {
+    flex: 1,
   },
   sheetHeader: {
     flexDirection: 'row',

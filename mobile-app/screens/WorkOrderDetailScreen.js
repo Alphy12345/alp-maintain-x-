@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { api } from '../services/api';
 
@@ -34,6 +35,20 @@ function RowItem({ left, right }) {
   );
 }
 
+function RowLink({ left, right, onPress, rightTone = 'muted' }) {
+  return (
+    <Pressable onPress={onPress} style={styles.rowLink}>
+      <Text style={styles.rowLeft}>{left}</Text>
+      <View style={styles.rowRightWrap}>
+        <Text style={[styles.rowRight, rightTone === 'link' && styles.rowRightLink]} numberOfLines={1}>
+          {right}
+        </Text>
+        <Text style={styles.rowChevron}>›</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function WorkOrderDetailScreen({ route, navigation }) {
   const workOrderId = route?.params?.workOrderId;
 
@@ -42,6 +57,8 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   const [savingStatus, setSavingStatus] = useState(false);
   const [error, setError] = useState('');
   const [workOrder, setWorkOrder] = useState(null);
+  const [asset, setAsset] = useState(null);
+  const [procedureProgress, setProcedureProgress] = useState({ completed: 0, total: 0 });
 
   const fetchWorkOrder = useCallback(async () => {
     if (!workOrderId) return;
@@ -61,6 +78,49 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   useEffect(() => {
     fetchWorkOrder();
   }, [fetchWorkOrder]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchWorkOrder();
+    }, [fetchWorkOrder])
+  );
+
+  const loadAsset = useCallback(async (assetId) => {
+    if (!assetId) return;
+    try {
+      const res = await api.get(`/assets/${assetId}`);
+      setAsset(res?.data || null);
+    } catch (e) {
+      setAsset(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    const assetId = workOrder?.asset_id;
+    if (!assetId) {
+      setAsset(null);
+      return;
+    }
+    loadAsset(assetId);
+  }, [workOrder?.asset_id, loadAsset]);
+
+  const loadProcedureProgress = useCallback(async () => {
+    if (!workOrderId) return;
+    try {
+      const res = await api.get(`/work-orders/${workOrderId}/procedure-progress`);
+      const completed = Number.isFinite(res?.data?.completed) ? res.data.completed : 0;
+      const total = Number.isFinite(res?.data?.total) ? res.data.total : 0;
+      setProcedureProgress({ completed, total });
+    } catch (e) {
+      setProcedureProgress({ completed: 0, total: 0 });
+    }
+  }, [workOrderId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProcedureProgress();
+    }, [loadProcedureProgress])
+  );
 
   const status = (workOrder?.status || 'open').toString().toLowerCase();
 
@@ -100,6 +160,54 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     return workOrder.due_date;
   }, [workOrder?.due_date]);
 
+  const assetName = useMemo(() => {
+    if (asset?.asset_name) return asset.asset_name;
+    if (workOrder?.asset_id) return `Asset #${workOrder.asset_id}`;
+    return '—';
+  }, [asset?.asset_name, workOrder?.asset_id]);
+
+  const assetStatusText = useMemo(() => {
+    const s = (asset?.status || '').toString().trim().toLowerCase();
+    if (!s) return '—';
+    return asset?.status;
+  }, [asset?.status]);
+
+  const openAsset = useCallback(() => {
+    const assetId = workOrder?.asset_id;
+    if (!assetId) return;
+    navigation.navigate('AssetDetail', { assetId });
+  }, [navigation, workOrder?.asset_id]);
+
+  const openCategories = useCallback(() => {
+    const categories = Array.isArray(workOrder?.categories) ? workOrder.categories : [];
+    navigation.navigate('Categories', { categories, title: 'Categories' });
+  }, [navigation, workOrder?.categories]);
+
+  const categoriesText = useMemo(() => {
+    const cats = Array.isArray(workOrder?.categories) ? workOrder.categories : [];
+    if (cats.length === 0) return '—';
+    const first = cats[0]?.name || 'Category';
+    if (cats.length === 1) return first;
+    return `${first} +${cats.length - 1}`;
+  }, [workOrder?.categories]);
+
+  const scheduleText = useMemo(() => {
+    if (workOrder?.recurrence) return workOrder.recurrence;
+    if (workOrder?.start_date) return `Starts ${workOrder.start_date}`;
+    return '—';
+  }, [workOrder?.recurrence, workOrder?.start_date]);
+
+  const partsUsed = useMemo(() => {
+    const wop = Array.isArray(workOrder?.work_order_parts) ? workOrder.work_order_parts : [];
+    return wop
+      .map((row) => {
+        const name = row?.part?.name || (row?.part_id ? `Part #${row.part_id}` : 'Part');
+        const qty = Number.isFinite(row?.quantity) ? row.quantity : parseInt(row?.quantity || '1', 10) || 1;
+        return { key: `${row?.part_id || name}-${qty}`, name, qty };
+      })
+      .filter((x) => !!x.name);
+  }, [workOrder?.work_order_parts]);
+
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -107,14 +215,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           <Text style={styles.headerBtnText}>‹ Back</Text>
         </Pressable>
         <Text style={styles.headerCenter}>#{workOrderId ?? '-'}</Text>
-        <View style={styles.headerRight}>
-          <Pressable style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>⋯</Text>
-          </Pressable>
-          <Pressable style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>Edit</Text>
-          </Pressable>
-        </View>
+        <View style={styles.headerRight} />
       </View>
 
       {loading ? (
@@ -137,21 +238,35 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
 
           <View style={styles.tabs}>
             <TabButton label="Details" active={activeTab === 'details'} onPress={() => setActiveTab('details')} />
-            <TabButton label="Comments" active={activeTab === 'comments'} onPress={() => setActiveTab('comments')} />
+            <TabButton label="Parts" active={activeTab === 'parts'} onPress={() => setActiveTab('parts')} />
           </View>
 
-          {activeTab === 'comments' ? (
+          {activeTab === 'parts' ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Comments</Text>
-              <Text style={styles.cardSub}>Comments UI can be added once backend supports it.</Text>
+              <Text style={styles.cardTitle}>Parts</Text>
+
+              {partsUsed.length === 0 ? (
+                <Text style={styles.cardSub}>No parts have been recorded for this work order.</Text>
+              ) : (
+                <View style={styles.partsList}>
+                  {partsUsed.map((p) => (
+                    <View key={p.key} style={styles.partRow}>
+                      <Text style={styles.partName} numberOfLines={1}>
+                        {p.name}
+                      </Text>
+                      <View style={styles.partQtyPill}>
+                        <Text style={styles.partQtyText}>x{p.qty}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           ) : (
             <>
               <View style={styles.sectionRow}>
                 <Text style={styles.sectionTitle}>Status</Text>
-                <Pressable style={styles.linkBtn}>
-                  <Text style={styles.linkText}>Share</Text>
-                </Pressable>
+                <View style={{ width: 48 }} />
               </View>
 
               <View style={styles.statusRow}>
@@ -191,7 +306,9 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
 
               <View style={styles.cardAccent}>
                 <Text style={styles.cardAccentTitle}>Procedure</Text>
-                <Text style={styles.cardAccentSub}>0/10 Steps Completed</Text>
+                <Text style={styles.cardAccentSub}>
+                  {procedureProgress.completed}/{procedureProgress.total} Steps Completed
+                </Text>
                 <Pressable
                   style={styles.accentBtn}
                   onPress={() => navigation.navigate('ProcedureSteps', { workOrderId, procedureId: workOrder?.procedure_id })}
@@ -203,16 +320,14 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
               <View style={styles.card}>
                 <RowItem left="Location" right={workOrder?.location || '—'} />
                 <View style={styles.divider} />
-                <RowItem left="Asset" right={workOrder?.asset?.asset_name || (workOrder?.asset_id ? `Asset #${workOrder.asset_id}` : '—')} />
-              </View>
-
-              <View style={styles.footerRow}>
-                <Pressable style={styles.secondaryBtn}>
-                  <Text style={styles.secondaryBtnText}>Start Timer</Text>
-                </Pressable>
-                <Pressable style={styles.primaryBtnWide}>
-                  <Text style={styles.primaryBtnWideText}>View Procedure</Text>
-                </Pressable>
+                <RowLink left="Asset" right={assetName} onPress={openAsset} />
+                <View style={styles.divider} />
+                <RowLink left="Asset Status" right={assetStatusText} onPress={openAsset} />
+                <View style={styles.divider} />
+                <RowLink left="Categories" right={categoriesText} onPress={openCategories} />
+                <View style={styles.divider} />
+                <RowItem left="Schedule" right={scheduleText} />
+                <View style={styles.divider} />
               </View>
             </>
           )}
@@ -391,16 +506,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  rowLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   rowLeft: {
     color: '#111827',
     fontSize: 13,
     fontWeight: '900',
+  },
+  rowRightWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+    maxWidth: '62%',
   },
   rowRight: {
     color: '#6b7280',
     fontSize: 13,
     fontWeight: '800',
     maxWidth: '62%',
+  },
+  rowRightLink: {
+    color: '#2563eb',
+  },
+  rowChevron: {
+    color: '#9ca3af',
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: -1,
   },
   divider: {
     height: 1,
@@ -480,5 +617,38 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
+  },
+  partsList: {
+    gap: 10,
+    marginTop: 10,
+  },
+  partRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    backgroundColor: '#f9fafb',
+  },
+  partName: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '900',
+    flex: 1,
+  },
+  partQtyPill: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  partQtyText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
   },
 });

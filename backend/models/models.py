@@ -307,6 +307,7 @@ class ProcedureExecution(Base):
     __tablename__ = "procedure_executions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_id = Column(Integer, ForeignKey("work_orders.id"), nullable=True)
     procedure_id = Column(Integer, ForeignKey("procedures.id"), nullable=False)
     asset_id = Column(Integer, ForeignKey("assets.id"), nullable=False)
 

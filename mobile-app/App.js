@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginScreen from './screens/LoginScreen';
 import { AuthProvider } from './context/AuthContext';
@@ -41,28 +42,36 @@ function AppRoot() {
 
   if (isBooting) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0b1220' }}>
-        <StatusBar style="light" />
-        <ActivityIndicator color="#ffffff" />
-      </View>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0b1220' }} edges={["top", "bottom"]}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <StatusBar style="light" />
+            <ActivityIndicator color="#ffffff" />
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   if (!user) {
     return (
-      <>
-        <StatusBar style="light" />
-        <LoginScreen onLoggedIn={setUser} />
-      </>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0b1220' }} edges={["top", "bottom"]}>
+          <StatusBar style="light" />
+          <LoginScreen onLoggedIn={setUser} />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <NavigationContainer>
-        <RootStack />
-      </NavigationContainer>
-    </>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f6f7fb' }} edges={["top", "bottom"]}>
+        <StatusBar style="dark" />
+        <NavigationContainer>
+          <RootStack />
+        </NavigationContainer>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
