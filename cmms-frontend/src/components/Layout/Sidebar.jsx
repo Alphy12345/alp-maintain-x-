@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Users,
-  Truck
+  Truck,
+  FileText
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Categories', href: '/categories', icon: Tags },
   { name: 'Parts Inventory', href: '/parts', icon: Boxes },
   { name: 'Procedures', href: '/library/procedures', icon: Tags },
+  { name: 'Output Data', href: '/output-data', icon: FileText },
   { name: 'Teams / Users', href: '/teams-users', icon: Users },
   { name: 'Vendors', href: '/vendors', icon: Truck },
 ];

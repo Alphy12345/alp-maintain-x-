@@ -15,6 +15,8 @@ from routes.categories import router as categories_router
 from routes.users import router as users_router
 from routes.team_users import router as team_users_router
 from routes.auth import router as auth_router
+from routes.events import router as events_router
+from routes.output_data import router as output_data_router
 
 app = FastAPI(title="MaintainX Backend")
 
@@ -41,6 +43,7 @@ def on_startup():
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(events_router)
 app.include_router(vendors_router)
 app.include_router(assets_router)
 app.include_router(parts_router)
@@ -50,3 +53,4 @@ app.include_router(team_users_router)
 app.include_router(work_orders_router)
 app.include_router(categories_router)
 app.include_router(procedures_router)
+app.include_router(output_data_router)

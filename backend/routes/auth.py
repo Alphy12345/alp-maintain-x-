@@ -83,6 +83,31 @@ def get_current_user(
     return user
 
 
+def get_optional_current_user(
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(default=None),
+) -> User | None:
+    if not authorization:
+        return None
+
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    token = parts[1].strip()
+    try:
+        payload = _verify_and_decode_token(token)
+    except HTTPException:
+        return None
+
+    user_id = payload.get("sub")
+    if not isinstance(user_id, int):
+        return None
+
+    user = db.query(User).filter(User.id == user_id).first()
+    return user
+
+
 @router.post("/login", response_model=AuthTokenOut)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.user_name == payload.username).first()

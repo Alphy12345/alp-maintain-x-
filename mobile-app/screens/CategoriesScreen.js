@@ -1,9 +1,12 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '../context/ThemeContext';
+
 export default function CategoriesScreen({ route, navigation }) {
   const categories = route?.params?.categories;
   const title = route?.params?.title;
+  const { mode, colors } = useTheme();
 
   const list = useMemo(() => {
     const cats = Array.isArray(categories) ? categories : [];
@@ -13,28 +16,28 @@ export default function CategoriesScreen({ route, navigation }) {
   }, [categories]);
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>‹ Back</Text>
+          <Text style={[styles.headerBtnText, { color: colors.primary }]}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           {title || 'Categories'}
         </Text>
         <View style={{ width: 64 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Categories</Text>
-        <Text style={styles.subtitle}>{list.length} Total</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Categories</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedText }]}>{list.length} Total</Text>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {list.length === 0 ? (
-            <Text style={styles.cardSub}>No categories assigned.</Text>
+            <Text style={[styles.cardSub, { color: colors.mutedText }]}>No categories assigned.</Text>
           ) : (
             list.map((c) => (
-              <View key={String(c.id ?? c.name)} style={styles.catRow}>
-                <Text style={styles.catText}>{c.name}</Text>
+              <View key={String(c.id ?? c.name)} style={[styles.catRow, { borderTopColor: mode === 'dark' ? colors.border : '#eef2f7' }]}>
+                <Text style={[styles.catText, { color: colors.text }]}>{c.name}</Text>
               </View>
             ))
           )}

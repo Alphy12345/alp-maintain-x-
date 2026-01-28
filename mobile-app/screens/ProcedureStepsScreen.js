@@ -13,50 +13,266 @@ import {
 } from 'react-native';
 
 import { api } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 function FieldRow({ index, field, value, onChange }) {
+  const { mode, colors } = useTheme();
   const label = field?.label || 'Step';
   const required = !!field?.required;
   const type = (field?.field_type || '').toString().trim().toLowerCase();
 
+  const isChecklistType = useMemo(() => {
+    return type === 'checklist' || type === 'check_list' || type === 'check list';
+  }, [type]);
+
+  const isMultiChoiceType = useMemo(() => {
+    return type === 'multiple_choice' || type === 'multiple choice';
+  }, [type]);
+
+  const choiceOptions = useMemo(() => {
+    let cfg = field?.config;
+    if (typeof cfg === 'string') {
+      const s = cfg.trim();
+      if (s) {
+        try {
+          cfg = JSON.parse(s);
+        } catch (e) {
+          try {
+            cfg = JSON.parse(s.replace(/\r?\n/g, '').replace(/'/g, '"'));
+          } catch (e2) {
+            cfg = null;
+          }
+        }
+      } else {
+        cfg = null;
+      }
+    }
+
+    const raw =
+      (Array.isArray(cfg?.options) && cfg.options.length
+        ? cfg.options
+        : (Array.isArray(cfg?.choices) && cfg.choices.length
+          ? cfg.choices
+          : (Array.isArray(cfg?.items) && cfg.items.length ? cfg.items : field?.options))) || [];
+    const list = Array.isArray(raw) ? raw : [];
+    return list
+      .map((o) => {
+        if (o === null || o === undefined) return null;
+        if (typeof o === 'string' || typeof o === 'number') {
+          const s = String(o);
+          return { label: s, value: s };
+        }
+        const label =
+          o?.label !== undefined
+            ? String(o.label)
+            : (o?.name !== undefined ? String(o.name) : (o?.value !== undefined ? String(o.value) : ''));
+        const value = o?.value !== undefined ? String(o.value) : label;
+        if (!label && !value) return null;
+        return { label: label || value, value: value || label };
+      })
+      .filter(Boolean);
+  }, [field?.config, field?.options]);
+
+  const isChoiceType = useMemo(() => {
+    if (!choiceOptions.length) return false;
+    return (
+      type === 'multiple_choice' ||
+      type === 'multiple choice' ||
+      type === 'select' ||
+      type === 'dropdown' ||
+      type === 'radio' ||
+      type === 'single_select' ||
+      type === 'single select'
+    );
+  }, [choiceOptions.length, type]);
+
+  const parseMultiChoiceValue = useCallback((raw) => {
+    if (raw === null || raw === undefined) return [];
+    if (Array.isArray(raw)) return raw.map((x) => String(x));
+    const s = String(raw).trim();
+    if (!s) return [];
+    if (s.startsWith('[')) {
+      try {
+        const arr = JSON.parse(s);
+        return Array.isArray(arr) ? arr.map((x) => String(x)) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return s
+      .split(',')
+      .map((x) => String(x || '').trim())
+      .filter(Boolean);
+  }, []);
+
   const isComplete = useMemo(() => {
     if (type === 'checkbox' || type === 'check') return value === true;
+    if (type === 'inspection_check') {
+      const v = (value ?? '').toString().trim().toLowerCase();
+      return v === 'pass' || v === 'flag' || v === 'fail';
+    }
+    if (isChoiceType) {
+      if (isMultiChoiceType) {
+        return parseMultiChoiceValue(value).length > 0;
+      }
+      const s = (value ?? '').toString().trim();
+      return s.length > 0;
+    }
+    if (isChecklistType) {
+      return parseMultiChoiceValue(value).length > 0;
+    }
     if (type === 'photo' || type === 'image') return !!value;
     const s = (value ?? '').toString().trim();
     return s.length > 0;
-  }, [type, value]);
+  }, [isChecklistType, isChoiceType, isMultiChoiceType, parseMultiChoiceValue, type, value]);
 
   const renderControl = () => {
     if (type === 'checkbox' || type === 'check') {
       const checked = !!value;
       return (
-        <Pressable onPress={() => onChange(!checked)} style={[styles.checkbox, checked && styles.checkboxChecked]}>
+        <Pressable
+          onPress={() => onChange(!checked)}
+          style={[
+            styles.checkbox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            checked && styles.checkboxChecked,
+          ]}
+        >
           {checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
         </Pressable>
       );
     }
 
-    if (type === 'number' || type === 'numeric') {
+    if (isChecklistType) {
+      const selectedMulti = parseMultiChoiceValue(value);
+      return (
+        <View style={styles.checklistWrap}>
+          {choiceOptions.map((opt) => {
+            const v = String(opt.value);
+            const active = selectedMulti.includes(v);
+            return (
+              <Pressable
+                key={`${field?.id || label}-check-${opt.value}`}
+                onPress={() => {
+                  const next = active ? selectedMulti.filter((x) => x !== v) : [...selectedMulti, v];
+                  onChange(next.length ? JSON.stringify(next) : '');
+                }}
+                style={styles.checklistRow}
+              >
+                <View
+                  style={[
+                    styles.checklistBox,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    active && styles.checklistBoxChecked,
+                  ]}
+                >
+                  {active ? <Text style={styles.checklistTick}>✓</Text> : null}
+                </View>
+                <Text style={[styles.checklistText, { color: colors.text }]} numberOfLines={3}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      );
+    }
+
+    if (isChoiceType) {
+      const selected = (value ?? '').toString();
+      const selectedMulti = isMultiChoiceType ? parseMultiChoiceValue(value) : [];
+      return (
+        <View style={styles.choiceWrap}>
+          {choiceOptions.map((opt) => {
+            const active = isMultiChoiceType ? selectedMulti.includes(String(opt.value)) : String(opt.value) === selected;
+            return (
+              <Pressable
+                key={`${field?.id || label}-${opt.value}`}
+                onPress={() => {
+                  if (isMultiChoiceType) {
+                    const v = String(opt.value);
+                    const has = selectedMulti.includes(v);
+                    const next = has ? selectedMulti.filter((x) => x !== v) : [...selectedMulti, v];
+                    onChange(next.length ? JSON.stringify(next) : '');
+                    return;
+                  }
+                  onChange(active ? '' : String(opt.value));
+                }}
+                style={[
+                  styles.choiceBtn,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  active && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+              >
+                <Text style={[styles.choiceBtnText, { color: active ? '#ffffff' : colors.text }]} numberOfLines={2}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      );
+    }
+
+    if (type === 'inspection_check') {
+      const v = (value ?? '').toString().trim().toLowerCase();
+      const isPass = v === 'pass';
+      const isFlag = v === 'flag';
+      const isFail = v === 'fail';
+
+      return (
+        <View style={styles.inspectRow}>
+          <Pressable
+            onPress={() => onChange(isPass ? '' : 'pass')}
+            style={[
+              styles.inspectBtn,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              isPass && { backgroundColor: '#16a34a', borderColor: '#16a34a' },
+            ]}
+          >
+            <Text style={[styles.inspectBtnText, { color: isPass ? '#ffffff' : colors.text }]}>Pass</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onChange(isFlag ? '' : 'flag')}
+            style={[
+              styles.inspectBtn,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              isFlag && { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
+            ]}
+          >
+            <Text style={[styles.inspectBtnText, { color: isFlag ? '#111827' : colors.text }]}>Flag</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onChange(isFail ? '' : 'fail')}
+            style={[
+              styles.inspectBtn,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              isFail && { backgroundColor: '#dc2626', borderColor: '#dc2626' },
+            ]}
+          >
+            <Text style={[styles.inspectBtnText, { color: '#ffffff' }]}>Fail</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (type === 'number' || type === 'numeric' || type === 'amount' || type === 'currency') {
+      const placeholder = type === 'amount' || type === 'currency' ? 'Enter amount' : 'Enter number';
       return (
         <TextInput
           value={value ?? ''}
           onChangeText={(t) => onChange(t)}
           keyboardType="numeric"
-          placeholder="Enter number"
+          placeholder={placeholder}
           placeholderTextColor="#9ca3af"
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
         />
       );
     }
 
     if (type === 'photo' || type === 'image') {
       return (
-        <Pressable
-          onPress={() => Alert.alert('Photo', 'Photo capture/upload is not implemented yet.')}
-          style={styles.photoBtn}
-        >
-          <Text style={styles.photoBtnText}>{value ? 'Photo Added' : 'Add Photo'}</Text>
-        </Pressable>
+        <Text style={[styles.hint, { color: colors.mutedText }]}>Photo/file upload is disabled on mobile.</Text>
       );
     }
 
@@ -66,19 +282,19 @@ function FieldRow({ index, field, value, onChange }) {
         onChangeText={(t) => onChange(t)}
         placeholder="Enter response"
         placeholderTextColor="#9ca3af"
-        style={styles.input}
+        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
       />
     );
   };
 
   return (
-    <View style={styles.stepRow}>
-      <View style={styles.stepIndex}>
-        <Text style={styles.stepIndexText}>{index}</Text>
+    <View style={[styles.stepRow, { borderTopColor: mode === 'dark' ? colors.border : '#eef2f7' }]}>
+      <View style={[styles.stepIndex, { backgroundColor: mode === 'dark' ? '#111827' : '#eff6ff' }]}>
+        <Text style={[styles.stepIndexText, { color: colors.primary }]}>{index}</Text>
       </View>
       <View style={styles.stepBody}>
         <View style={styles.stepHeaderRow}>
-          <Text style={styles.stepLabel} numberOfLines={2}>
+          <Text style={[styles.stepLabel, { color: colors.text }]} numberOfLines={2}>
             {label}
           </Text>
           {isComplete ? (
@@ -87,7 +303,7 @@ function FieldRow({ index, field, value, onChange }) {
             </View>
           ) : null}
         </View>
-        {!!required && <Text style={styles.stepRequired}>Required</Text>}
+        {!!required && <Text style={[styles.stepRequired, { color: mode === 'dark' ? '#fde68a' : '#b45309' }]}>Required</Text>}
         <View style={styles.controlWrap}>{renderControl()}</View>
       </View>
     </View>
@@ -97,6 +313,7 @@ function FieldRow({ index, field, value, onChange }) {
 export default function ProcedureStepsScreen({ route, navigation }) {
   const workOrderId = route?.params?.workOrderId;
   const initialProcedureId = route?.params?.procedureId;
+  const { colors } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -268,19 +485,19 @@ export default function ProcedureStepsScreen({ route, navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>‹ Back</Text>
+          <Text style={[styles.headerBtnText, { color: colors.primary }]}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           {procedure?.name || 'Procedure'}
         </Text>
         <Pressable onPress={save} disabled={saving || loading} style={[styles.headerBtn, (saving || loading) && styles.headerBtnDisabled]}>
-          <Text style={styles.headerBtnText}>{saving ? 'Saving…' : 'Save'}</Text>
+          <Text style={[styles.headerBtnText, { color: colors.primary }]}>{saving ? 'Saving…' : 'Save'}</Text>
         </Pressable>
       </View>
 
@@ -288,26 +505,26 @@ export default function ProcedureStepsScreen({ route, navigation }) {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator />
-            <Text style={styles.hint}>Loading…</Text>
+            <Text style={[styles.hint, { color: colors.mutedText }]}>Loading…</Text>
           </View>
         ) : error ? (
           <View style={styles.center}>
-            <Text style={styles.error}>{error}</Text>
+            <Text style={[styles.error, { color: colors.dangerText }]}>{error}</Text>
             <Pressable onPress={load} style={styles.primaryBtn}>
               <Text style={styles.primaryBtnText}>Retry</Text>
             </Pressable>
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title} numberOfLines={2}>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
               {procedure?.name}
             </Text>
-            <Text style={styles.subtitle}>{stepsCount} Steps</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedText }]}>{stepsCount} Steps</Text>
 
             {(procedure?.sections || []).map((section) => (
-              <View key={String(section?.id)} style={styles.card}>
-                <Text style={styles.cardTitle}>{section?.title || 'Section'}</Text>
-                {!!section?.description && <Text style={styles.cardSub}>{section.description}</Text>}
+              <View key={String(section?.id)} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>{section?.title || 'Section'}</Text>
+                {!!section?.description && <Text style={[styles.cardSub, { color: colors.mutedText }]}>{section.description}</Text>}
 
                 {(section?.fields || []).map((field, idx) => (
                   <FieldRow
@@ -324,7 +541,7 @@ export default function ProcedureStepsScreen({ route, navigation }) {
         )}
       </View>
 
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <Pressable
           style={[styles.bottomBtnPrimary, (saving || loading || !!error) && styles.bottomBtnDisabled]}
           onPress={save}
@@ -491,6 +708,70 @@ const styles = StyleSheet.create({
   controlWrap: {
     marginTop: 10,
   },
+  choiceWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  choiceBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minWidth: 110,
+    maxWidth: '100%',
+  },
+  choiceBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  checklistWrap: {
+    gap: 10,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  checklistBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checklistBoxChecked: {
+    borderColor: '#2563eb',
+    backgroundColor: '#2563eb',
+  },
+  checklistTick: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: -1,
+  },
+  checklistText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  inspectRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  inspectBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  inspectBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
@@ -521,20 +802,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     marginTop: -1,
-  },
-  photoBtn: {
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  photoBtnText: {
-    color: '#2563eb',
-    fontSize: 12,
-    fontWeight: '900',
   },
   bottomBar: {
     backgroundColor: '#ffffff',

@@ -6,7 +6,8 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     Date,
-    Float
+    Float,
+    DateTime,
 )
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -314,6 +315,10 @@ class ProcedureExecution(Base):
     performed_by = Column(Integer, ForeignKey("users.id"))
     performed_at = Column(Date)
     status = Column(String(50))  # in_progress / completed
+
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    duration_seconds = Column(Integer)
 
 
 # =====================================================

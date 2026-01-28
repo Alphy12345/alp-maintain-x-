@@ -1,11 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '../context/ThemeContext';
+
 export default function HomeScreen({ navigation }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.root}>
-      <Text style={styles.title}>You are logged in</Text>
-      <Text style={styles.subtitle}>This is a placeholder Home screen.</Text>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.text }]}>You are logged in</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedText }]}>This is a placeholder Home screen.</Text>
 
       <Pressable
         onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}

@@ -115,6 +115,12 @@ def init_db():
         if _table_exists(conn, "procedure_executions"):
             if not _column_exists(conn, "procedure_executions", "work_order_id"):
                 conn.execute(text("ALTER TABLE procedure_executions ADD COLUMN work_order_id INTEGER"))
+            if not _column_exists(conn, "procedure_executions", "started_at"):
+                conn.execute(text("ALTER TABLE procedure_executions ADD COLUMN started_at TIMESTAMP"))
+            if not _column_exists(conn, "procedure_executions", "completed_at"):
+                conn.execute(text("ALTER TABLE procedure_executions ADD COLUMN completed_at TIMESTAMP"))
+            if not _column_exists(conn, "procedure_executions", "duration_seconds"):
+                conn.execute(text("ALTER TABLE procedure_executions ADD COLUMN duration_seconds INTEGER"))
 
     db = SessionLocal()
     try:

@@ -1,10 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { logout } from '../services/auth';
+import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../services/api';
+import { useAppReload } from '../context/AppReloadContext';
 
 function Tile({ title, value, subtitle }) {
   return (
@@ -69,7 +73,13 @@ function normalizeStatus(status) {
 
 export default function OverviewScreen() {
   const { user, setUser } = useAuth();
+  const { mode, colors, toggleMode } = useTheme();
   const navigation = useNavigation();
+  const { reloadApp } = useAppReload();
+
+  const pollingIntervalRef = useRef(null);
+  const sseRef = useRef(null);
+  const sseAbortRef = useRef(null);
 
   const [dueTodayOpen, setDueTodayOpen] = useState(false);
   const [dueTodayLoading, setDueTodayLoading] = useState(false);
@@ -102,8 +112,116 @@ export default function OverviewScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
       loadAllWorkOrders();
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
     }, [loadAllWorkOrders])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let closed = false;
+
+      const closeSse = () => {
+        if (sseRef.current && typeof sseRef.current.close === 'function') {
+          try {
+            sseRef.current.close();
+          } catch (e) {
+          }
+        }
+        sseRef.current = null;
+        if (sseAbortRef.current) {
+          try {
+            sseAbortRef.current.abort();
+          } catch (e) {
+          }
+        }
+        sseAbortRef.current = null;
+      };
+
+      const startFetchSse = async () => {
+        closeSse();
+        const controller = new AbortController();
+        sseAbortRef.current = controller;
+
+        let token = null;
+        try {
+          token = await AsyncStorage.getItem('auth_token');
+        } catch (e) {
+          token = null;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/events/work-orders`, {
+          method: 'GET',
+          headers: {
+            Accept: 'text/event-stream',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+        });
+
+        if (!res?.body || typeof res.body.getReader !== 'function') {
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (!closed) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+
+            const lines = rawEvent.split('\n');
+            let eventName = '';
+            for (const line of lines) {
+              if (line.startsWith('event:')) eventName = line.slice(6).trim();
+            }
+            if (eventName === 'work_order') {
+              loadAllWorkOrders();
+            }
+          }
+        }
+      };
+
+      const start = async () => {
+        if (!user?.id) return;
+        try {
+          if (typeof global?.EventSource === 'function') {
+            closeSse();
+            const es = new global.EventSource(`${API_BASE_URL}/events/work-orders`);
+            sseRef.current = es;
+            es.addEventListener('work_order', () => {
+              loadAllWorkOrders();
+            });
+          } else {
+            await startFetchSse();
+          }
+        } catch (e) {
+        }
+      };
+
+      start();
+
+      return () => {
+        closed = true;
+        closeSse();
+      };
+    }, [loadAllWorkOrders, user?.id])
   );
 
   const closeDueToday = useCallback(() => {
@@ -117,10 +235,23 @@ export default function OverviewScreen() {
   const openWorkOrder = useCallback(
     (workOrderId) => {
       if (!workOrderId) return;
+
+      const wo = (Array.isArray(allWorkOrders) ? allWorkOrders : []).find((w) => String(w?.id) === String(workOrderId)) || null;
+      const meId = user?.id;
+      const role = (user?.role || '').toString().trim().toLowerCase();
+      const isAdmin = role === 'admin';
+      const assignedId = wo?.assigned_user_id ?? wo?.assignedUserId ?? wo?.assignee_id;
+      const isAssignedToMe = meId && assignedId !== undefined && assignedId !== null && String(assignedId) === String(meId);
+
+      if (!isAdmin && (!wo || !assignedId || !isAssignedToMe)) {
+        Alert.alert('No access', 'You have no access to this info');
+        return;
+      }
+
       setDueTodayOpen(false);
       navigation.navigate('WorkOrderDetail', { workOrderId });
     },
-    [navigation]
+    [allWorkOrders, navigation, user?.id, user?.role]
   );
 
   const loadDueToday = useCallback(async () => {
@@ -160,7 +291,10 @@ export default function OverviewScreen() {
       d.setHours(0, 0, 0, 0);
       return d < today && norm(w?.status) !== 'done' && norm(w?.status) !== 'completed';
     }).length;
-    const pendingApproval = 0;
+    const completedTotal = items.filter((w) => {
+      const s = norm(w?.status);
+      return s === 'done' || s === 'completed';
+    }).length;
     const completed7 = items.filter((w) => {
       const s = norm(w?.status);
       if (s !== 'done' && s !== 'completed') return false;
@@ -175,7 +309,7 @@ export default function OverviewScreen() {
     return {
       highPriority,
       overdue,
-      pendingApproval,
+      completedTotal,
       completed7,
     };
   }, [allWorkOrders]);
@@ -188,6 +322,19 @@ export default function OverviewScreen() {
       return s === 'done' || s === 'completed';
     });
   }, [allWorkOrders]);
+
+  const assignedToMe = useMemo(() => {
+    const items = Array.isArray(allWorkOrders) ? allWorkOrders : [];
+    const meId = user?.id;
+    if (!meId) return [];
+    const norm = (s) => (s || '').toString().trim().toLowerCase();
+    return items
+      .filter((w) => String(w?.assigned_user_id || '') === String(meId))
+      .filter((w) => {
+        const s = norm(w?.status);
+        return s !== 'done' && s !== 'completed' && s !== 'cancelled' && s !== 'canceled';
+      });
+  }, [allWorkOrders, user?.id]);
 
   const doLogout = useCallback(async () => {
     await logout();
@@ -226,9 +373,9 @@ export default function OverviewScreen() {
     openStatusSheet('Overdue Work Orders', items);
   }, [allWorkOrders, openStatusSheet]);
 
-  const onPressPendingApproval = useCallback(() => {
-    openStatusSheet('Requests Pending Approval', []);
-  }, [openStatusSheet]);
+  const onPressCompletedWorkOrders = useCallback(() => {
+    openStatusSheet('Completed Work Orders', completedWorkOrders);
+  }, [completedWorkOrders, openStatusSheet]);
 
   const onPressCompleted7 = useCallback(() => {
     const norm = (s) => (s || '').toString().trim().toLowerCase();
@@ -246,13 +393,29 @@ export default function OverviewScreen() {
     openStatusSheet('Completed in the Last 7 Days', items);
   }, [allWorkOrders, openStatusSheet]);
 
+  const onReloadApp = useCallback(async () => {
+    setDueTodayOpen(false);
+    setStatusSheetOpen(false);
+    reloadApp();
+  }, [reloadApp]);
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.hello}>Hello{user?.user_name ? `, ${user.user_name}!` : '!'}</Text>
-            <Text style={styles.welcome}>Welcome to MNFG-1A</Text>
+            <Text style={[styles.hello, { color: colors.mutedText }]}>Hello{user?.user_name ? `, ${user.user_name}!` : '!'}</Text>
+            <Text style={[styles.welcome, { color: colors.text }]}>Welcome to MNFG-1A</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ color: colors.mutedText, fontSize: 12, fontWeight: '800' }}>Dark</Text>
+            <Switch
+              value={mode === 'dark'}
+              onValueChange={toggleMode}
+              trackColor={{ false: '#d1d5db', true: '#2563eb' }}
+              thumbColor={mode === 'dark' ? '#ffffff' : '#ffffff'}
+            />
           </View>
         </View>
 
@@ -261,43 +424,42 @@ export default function OverviewScreen() {
           <Text style={styles.quickLabel}>Due Today</Text>
           <Text style={styles.quickMeta}>{dueTodayCount}</Text>
         </Pressable>
+        <Pressable style={styles.quickBtn} onPress={onReloadApp}>
+          <Text style={styles.quickLabel}>Reload</Text>
+          <Text style={styles.quickMeta}>↻</Text>
+        </Pressable>
       </View>
 
       <Text style={styles.sectionTitle}>WORK ORDERS STATUS</Text>
       <View style={styles.grid}>
         <TileButton title="High Priority Work Orders" value={String(metrics.highPriority)} onPress={onPressHighPriority} />
         <TileButton title="Overdue Work Orders" value={String(metrics.overdue)} onPress={onPressOverdue} />
-        <TileButton title="Requests Pending Approval" value={String(metrics.pendingApproval)} onPress={onPressPendingApproval} />
+        <TileButton title="Completed Work Orders" value={String(metrics.completedTotal)} onPress={onPressCompletedWorkOrders} />
         <TileButton title="Completed in the Last 7 days" value={String(metrics.completed7)} onPress={onPressCompleted7} />
       </View>
 
-      <Text style={styles.sectionTitle}>COMPLETED WORK ORDERS</Text>
-      <View style={styles.todoCard}>
+      <Text style={styles.sectionTitle}>TO DO LIST</Text>
+      <View style={[styles.todoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.todoTitle, { color: colors.text }]}>Assigned To Me</Text>
         {allWorkOrdersLoading ? (
-          <Text style={styles.todoSubtitle}>Loading…</Text>
-        ) : completedWorkOrders.length === 0 ? (
-          <Text style={styles.todoSubtitle}>No completed work orders</Text>
+          <Text style={[styles.todoSubtitle, { color: colors.mutedText }]}>Loading…</Text>
+        ) : assignedToMe.length === 0 ? (
+          <Text style={[styles.todoSubtitle, { color: colors.mutedText }]}>No items</Text>
         ) : (
-          completedWorkOrders.slice(0, 8).map((wo) => (
+          assignedToMe.slice(0, 8).map((wo) => (
             <Pressable key={String(wo?.id)} style={styles.completedRow} onPress={() => openWorkOrder(wo?.id)}>
-              <Text style={styles.completedTitle} numberOfLines={1}>
+              <Text style={[styles.completedTitle, { color: colors.text }]} numberOfLines={1}>
                 {wo?.name || 'Work Order'}
               </Text>
-              <Text style={styles.completedMeta}>#{wo?.id ?? '-'}</Text>
+              <Text style={[styles.completedMeta, { color: colors.mutedText }]}>#{wo?.id ?? '-'}</Text>
             </Pressable>
           ))
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>TO DO LIST</Text>
-      <View style={styles.todoCard}>
-        <Text style={styles.todoTitle}>Assigned To Me</Text>
-        <Text style={styles.todoSubtitle}>No items</Text>
-      </View>
-
       <View style={{ height: 18 }} />
 
-      <Pressable style={styles.logoutBtn} onPress={doLogout}>
+      <Pressable style={[styles.logoutBtn, { backgroundColor: mode === 'dark' ? '#111827' : '#111827' }]} onPress={doLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </Pressable>
 
@@ -309,36 +471,36 @@ export default function OverviewScreen() {
         animationType="fade"
         onRequestClose={closeDueToday}
       >
-        <Pressable style={styles.sheetBackdrop} onPress={closeDueToday} />
+        <Pressable style={[styles.sheetBackdrop, { backgroundColor: colors.overlay }]} onPress={closeDueToday} />
         <View style={styles.sheetWrap}>
-          <View style={styles.sheetCard}>
+          <View style={[styles.sheetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.sheetHeader}>
               <View style={styles.sheetHeaderLeft}>
-                <View style={styles.calendarIcon}>
+                <View style={[styles.calendarIcon, { backgroundColor: mode === 'dark' ? '#111827' : '#eff6ff' }]}>
                   <Text style={styles.calendarIconText}>▦</Text>
                 </View>
-                <Text style={styles.sheetTitle}>Work Orders Due Today</Text>
+                <Text style={[styles.sheetTitle, { color: colors.text }]}>Work Orders Due Today</Text>
               </View>
               <Pressable onPress={closeDueToday} style={styles.sheetClose}>
-                <Text style={styles.sheetCloseText}>×</Text>
+                <Text style={[styles.sheetCloseText, { color: colors.mutedText }]}>×</Text>
               </Pressable>
             </View>
 
             {dueTodayLoading ? (
               <View style={styles.sheetLoading}>
                 <ActivityIndicator />
-                <Text style={styles.sheetHint}>Loading…</Text>
+                <Text style={[styles.sheetHint, { color: colors.mutedText }]}>Loading…</Text>
               </View>
             ) : dueTodayError ? (
               <View style={styles.sheetEmpty}>
-                <Text style={styles.sheetError}>{dueTodayError}</Text>
+                <Text style={[styles.sheetError, { color: colors.dangerText }]}>{dueTodayError}</Text>
                 <Pressable onPress={loadDueToday} style={styles.retryBtn}>
                   <Text style={styles.retryBtnText}>Retry</Text>
                 </Pressable>
               </View>
             ) : dueTodayItems.length === 0 ? (
               <View style={styles.sheetEmpty}>
-                <Text style={styles.sheetHint}>No work orders due today.</Text>
+                <Text style={[styles.sheetHint, { color: colors.mutedText }]}>No work orders due today.</Text>
               </View>
             ) : (
               <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetList}>
@@ -348,7 +510,7 @@ export default function OverviewScreen() {
                   return (
                     <Pressable
                       key={wo?.id?.toString?.() || String(Math.random())}
-                      style={styles.woCard}
+                      style={[styles.woCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => openWorkOrder(wo?.id)}
                     >
                       <Text style={styles.woTitle} numberOfLines={2}>
@@ -376,12 +538,12 @@ export default function OverviewScreen() {
         animationType="fade"
         onRequestClose={closeStatusSheet}
       >
-        <Pressable style={styles.sheetBackdrop} onPress={closeStatusSheet} />
+        <Pressable style={[styles.sheetBackdrop, { backgroundColor: colors.overlay }]} onPress={closeStatusSheet} />
         <View style={styles.sheetWrap}>
-          <View style={styles.sheetCard}>
+          <View style={[styles.sheetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.sheetHeader}>
               <View style={styles.sheetHeaderLeft}>
-                <View style={styles.calendarIcon}>
+                <View style={[styles.calendarIcon, { backgroundColor: mode === 'dark' ? '#111827' : '#eff6ff' }]}>
                   <Text style={styles.calendarIconText}>▦</Text>
                 </View>
                 <Text style={styles.sheetTitle} numberOfLines={1}>
@@ -395,7 +557,7 @@ export default function OverviewScreen() {
 
             {statusSheetItems.length === 0 ? (
               <View style={styles.sheetEmpty}>
-                <Text style={styles.sheetHint}>No work orders</Text>
+                <Text style={[styles.sheetHint, { color: colors.mutedText }]}>No work orders</Text>
               </View>
             ) : (
               <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetList}>
@@ -405,7 +567,7 @@ export default function OverviewScreen() {
                   return (
                     <Pressable
                       key={wo?.id?.toString?.() || String(Math.random())}
-                      style={styles.woCard}
+                      style={[styles.woCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       onPress={() => openWorkOrder(wo?.id)}
                     >
                       <Text style={styles.woTitle} numberOfLines={2}>

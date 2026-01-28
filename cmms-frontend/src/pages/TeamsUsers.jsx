@@ -15,6 +15,8 @@ const TeamsUsers = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [userForm, setUserForm] = useState({ user_name: '', password: '', role: 'admin' });
   const [savingUser, setSavingUser] = useState(false);
+  const [userMode, setUserMode] = useState('create');
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const [teams, setTeams] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -244,34 +246,77 @@ const TeamsUsers = () => {
   }, [users, search]);
 
   const openCreateUser = () => {
+    setUserMode('create');
+    setSelectedUser(null);
     setUserForm({ user_name: '', password: '', role: 'admin' });
     setShowUserModal(true);
+  };
+
+  const openEditUser = (u) => {
+    setUserMode('edit');
+    setSelectedUser(u);
+    setUserForm({ user_name: u?.user_name || '', password: '', role: u?.role || 'admin' });
+    setShowUserModal(true);
+  };
+
+  const closeUserModal = () => {
+    setShowUserModal(false);
+    setUserMode('create');
+    setSelectedUser(null);
+    setUserForm({ user_name: '', password: '', role: 'admin' });
   };
 
   const handleSaveUser = async () => {
     const user_name = String(userForm.user_name || '').trim();
     const password = String(userForm.password || '');
     const role = String(userForm.role || '').trim();
-    if (!user_name || !password || !role) return;
+    if (!user_name || !role) return;
+    if (userMode === 'create' && !String(password || '').trim()) return;
     setSavingUser(true);
     setUsersError('');
     try {
-      await axios.post(
-        `${API_BASE_URL}/users`,
-        { user_name, password, role },
-        {
+      if (userMode === 'edit') {
+        if (!selectedUser?.id) throw new Error('User id not found');
+        const payload = { user_name, role };
+        if (String(password || '').trim()) payload.password = password;
+        await axios.patch(`${API_BASE_URL}/users/${selectedUser.id}`, payload, {
           headers: {
             accept: 'application/json',
             'Content-Type': 'application/json',
           },
-        },
-      );
-      setShowUserModal(false);
+        });
+      } else {
+        await axios.post(
+          `${API_BASE_URL}/users`,
+          { user_name, password, role },
+          {
+            headers: {
+              accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+      }
+      closeUserModal();
       await fetchUsers();
     } catch (e) {
       setUsersError(e?.response?.data?.detail || e?.message || 'Failed to save user');
     } finally {
       setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (u) => {
+    if (!u?.id) return;
+    const ok = window.confirm('Delete this user?');
+    if (!ok) return;
+    setUsersError('');
+    try {
+      await axios.delete(`${API_BASE_URL}/users/${u.id}`, { headers: { accept: '*/*' } });
+      await fetchUsers();
+    } catch (e) {
+      setUsersError(e?.response?.data?.detail || e?.message || 'Failed to delete user');
+    } finally {
     }
   };
 
@@ -464,9 +509,22 @@ const TeamsUsers = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"></td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"></td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button type="button" className="p-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-200">
-                          <MoreVertical className="w-4 h-4 text-gray-500" />
-                        </button>
+                        <div className="inline-flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => openEditUser(u)}
+                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u)}
+                            className="text-sm text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -598,8 +656,8 @@ const TeamsUsers = () => {
 
       <Modal
         isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
-        title="Add User"
+        onClose={closeUserModal}
+        title={userMode === 'edit' ? 'Edit User' : 'Add User'}
         size="lg"
       >
         <div className="space-y-4">
@@ -637,14 +695,19 @@ const TeamsUsers = () => {
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowUserModal(false)}>
+            <Button variant="secondary" onClick={closeUserModal}>
               Cancel
             </Button>
             <Button
               onClick={handleSaveUser}
-              disabled={savingUser || !String(userForm.user_name || '').trim() || !String(userForm.password || '').trim() || !String(userForm.role || '').trim()}
+              disabled={
+                savingUser ||
+                !String(userForm.user_name || '').trim() ||
+                !String(userForm.role || '').trim() ||
+                (userMode === 'create' && !String(userForm.password || '').trim())
+              }
             >
-              {savingUser ? 'Saving…' : 'Add User'}
+              {savingUser ? 'Saving…' : userMode === 'edit' ? 'Save' : 'Add User'}
             </Button>
           </div>
         </div>

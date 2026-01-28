@@ -11,6 +11,7 @@ import TeamsUsers from './pages/TeamsUsers.jsx';
 import InviteUsers from './pages/InviteUsers.jsx';
 import Vendors from './pages/Vendors.jsx';
 import VendorCreate from './pages/VendorCreate.jsx';
+import OutputData from './pages/OutputData.jsx';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/vendors/create" element={<VendorCreate />} />
           <Route path="/vendors/:id/edit" element={<VendorCreate />} />
+          <Route path="/output-data" element={<OutputData />} />
 
           <Route path="/requests" element={<Navigate to="/work-orders" replace />} />
           <Route path="/messages" element={<Navigate to="/work-orders" replace />} />

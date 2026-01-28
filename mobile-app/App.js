@@ -9,18 +9,26 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/AuthContext';
 import { getCurrentUser, getToken, logout } from './services/auth';
 import RootStack from './navigation/RootStack';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AppReloadProvider, useAppReload } from './context/AppReloadContext';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoot />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppReloadProvider>
+          <AppRoot />
+        </AppReloadProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
 function AppRoot() {
   const [isBooting, setIsBooting] = useState(true);
   const { user, setUser } = useAuth();
+  const { mode, colors, hydrated } = useTheme();
+  const { reloadKey } = useAppReload();
 
   useEffect(() => {
     const boot = async () => {
@@ -40,13 +48,13 @@ function AppRoot() {
     boot();
   }, []);
 
-  if (isBooting) {
+  if (isBooting || !hydrated) {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#0b1220' }} edges={["top", "bottom"]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <StatusBar style="light" />
-            <ActivityIndicator color="#ffffff" />
+            <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+            <ActivityIndicator color={mode === 'dark' ? '#ffffff' : '#111827'} />
           </View>
         </SafeAreaView>
       </SafeAreaProvider>
@@ -56,8 +64,8 @@ function AppRoot() {
   if (!user) {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#0b1220' }} edges={["top", "bottom"]}>
-          <StatusBar style="light" />
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
+          <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
           <LoginScreen onLoggedIn={setUser} />
         </SafeAreaView>
       </SafeAreaProvider>
@@ -66,9 +74,9 @@ function AppRoot() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f6f7fb' }} edges={["top", "bottom"]}>
-        <StatusBar style="dark" />
-        <NavigationContainer>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        <NavigationContainer key={String(reloadKey)}>
           <RootStack />
         </NavigationContainer>
       </SafeAreaView>

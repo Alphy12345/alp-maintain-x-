@@ -2,18 +2,21 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 function Row({ label, value }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value ?? '—'}</Text>
+      <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.rowValue, { color: colors.mutedText }]}>{value ?? '—'}</Text>
     </View>
   );
 }
 
 export default function AssetDetailScreen({ route, navigation }) {
   const assetId = route?.params?.assetId;
+  const { colors } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,12 +49,12 @@ export default function AssetDetailScreen({ route, navigation }) {
   }, [asset?.asset_name, assetId]);
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>‹ Back</Text>
+          <Text style={[styles.headerBtnText, { color: colors.primary }]}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
         <View style={{ width: 64 }} />
@@ -60,37 +63,37 @@ export default function AssetDetailScreen({ route, navigation }) {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator />
-          <Text style={styles.hint}>Loading…</Text>
+          <Text style={[styles.hint, { color: colors.mutedText }]}>Loading…</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={styles.error}>{error}</Text>
+          <Text style={[styles.error, { color: colors.dangerText }]}>{error}</Text>
           <Pressable onPress={load} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Retry</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title}>{asset?.asset_name || '—'}</Text>
-          <Text style={styles.subtitle}>Asset Details</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{asset?.asset_name || '—'}</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedText }]}>Asset Details</Text>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Row label="Status" value={asset?.status} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Location" value={asset?.location} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Criticality" value={asset?.criticality} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Type" value={asset?.asset_type} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Manufacturer" value={asset?.manufacturer} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Model" value={asset?.model} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Serial No" value={asset?.model_serial_no} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Year" value={asset?.year != null ? String(asset.year) : '—'} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Row label="Description" value={asset?.description} />
           </View>
         </ScrollView>

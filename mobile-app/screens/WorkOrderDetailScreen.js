@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { useFocusEffect } from '@react-navigation/native';
 
 import { api } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 function TabButton({ label, active, onPress }) {
   return (
@@ -25,10 +26,11 @@ function StatusButton({ label, active, disabled, onPress }) {
 }
 
 function RowItem({ left, right }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.rowItem}>
-      <Text style={styles.rowLeft}>{left}</Text>
-      <Text style={styles.rowRight} numberOfLines={1}>
+      <Text style={[styles.rowLeft, { color: colors.text }]}>{left}</Text>
+      <Text style={[styles.rowRight, { color: colors.mutedText }]} numberOfLines={1}>
         {right}
       </Text>
     </View>
@@ -36,14 +38,21 @@ function RowItem({ left, right }) {
 }
 
 function RowLink({ left, right, onPress, rightTone = 'muted' }) {
+  const { colors } = useTheme();
   return (
     <Pressable onPress={onPress} style={styles.rowLink}>
-      <Text style={styles.rowLeft}>{left}</Text>
+      <Text style={[styles.rowLeft, { color: colors.text }]}>{left}</Text>
       <View style={styles.rowRightWrap}>
-        <Text style={[styles.rowRight, rightTone === 'link' && styles.rowRightLink]} numberOfLines={1}>
+        <Text
+          style={[
+            styles.rowRight,
+            { color: rightTone === 'link' ? colors.primary : colors.mutedText },
+          ]}
+          numberOfLines={1}
+        >
           {right}
         </Text>
-        <Text style={styles.rowChevron}>›</Text>
+        <Text style={[styles.rowChevron, { color: colors.mutedText }]}>›</Text>
       </View>
     </Pressable>
   );
@@ -51,6 +60,7 @@ function RowLink({ left, right, onPress, rightTone = 'muted' }) {
 
 export default function WorkOrderDetailScreen({ route, navigation }) {
   const workOrderId = route?.params?.workOrderId;
+  const { colors } = useTheme();
 
   const [activeTab, setActiveTab] = useState('details');
   const [loading, setLoading] = useState(true);
@@ -209,49 +219,49 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   }, [workOrder?.work_order_parts]);
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>‹ Back</Text>
+          <Text style={[styles.headerBtnText, { color: colors.primary }]}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.headerCenter}>#{workOrderId ?? '-'}</Text>
+        <Text style={[styles.headerCenter, { color: colors.text }]}>#{workOrderId ?? '-'}</Text>
         <View style={styles.headerRight} />
       </View>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator />
-          <Text style={styles.hint}>Loading…</Text>
+          <Text style={[styles.hint, { color: colors.mutedText }]}>Loading…</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={styles.error}>{error}</Text>
+          <Text style={[styles.error, { color: colors.dangerText }]}>{error}</Text>
           <Pressable onPress={fetchWorkOrder} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Retry</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title} numberOfLines={3}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={3}>
             {title}
           </Text>
 
-          <View style={styles.tabs}>
+          <View style={[styles.tabs, { borderBottomColor: colors.border }] }>
             <TabButton label="Details" active={activeTab === 'details'} onPress={() => setActiveTab('details')} />
             <TabButton label="Parts" active={activeTab === 'parts'} onPress={() => setActiveTab('parts')} />
           </View>
 
           {activeTab === 'parts' ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Parts</Text>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Parts</Text>
 
               {partsUsed.length === 0 ? (
-                <Text style={styles.cardSub}>No parts have been recorded for this work order.</Text>
+                <Text style={[styles.cardSub, { color: colors.mutedText }]}>No parts have been recorded for this work order.</Text>
               ) : (
                 <View style={styles.partsList}>
                   {partsUsed.map((p) => (
-                    <View key={p.key} style={styles.partRow}>
-                      <Text style={styles.partName} numberOfLines={1}>
+                    <View key={p.key} style={[styles.partRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                      <Text style={[styles.partName, { color: colors.text }]} numberOfLines={1}>
                         {p.name}
                       </Text>
                       <View style={styles.partQtyPill}>
@@ -265,7 +275,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           ) : (
             <>
               <View style={styles.sectionRow}>
-                <Text style={styles.sectionTitle}>Status</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Status</Text>
                 <View style={{ width: 48 }} />
               </View>
 
@@ -296,17 +306,17 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
                 />
               </View>
 
-              {!!error && <Text style={styles.inlineError}>{error}</Text>}
+              {!!error && <Text style={[styles.inlineError, { color: colors.dangerText }]}>{error}</Text>}
 
-              <View style={styles.card}>
+              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <RowItem left="Due Date" right={dueDateText} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowItem left="Assigned to" right={assignedTo} />
               </View>
 
-              <View style={styles.cardAccent}>
-                <Text style={styles.cardAccentTitle}>Procedure</Text>
-                <Text style={styles.cardAccentSub}>
+              <View style={[styles.cardAccent, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+                <Text style={[styles.cardAccentTitle, { color: colors.text }]}>Procedure</Text>
+                <Text style={[styles.cardAccentSub, { color: colors.mutedText }]}>
                   {procedureProgress.completed}/{procedureProgress.total} Steps Completed
                 </Text>
                 <Pressable
@@ -317,17 +327,17 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
                 </Pressable>
               </View>
 
-              <View style={styles.card}>
+              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <RowItem left="Location" right={workOrder?.location || '—'} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowLink left="Asset" right={assetName} onPress={openAsset} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowLink left="Asset Status" right={assetStatusText} onPress={openAsset} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowLink left="Categories" right={categoriesText} onPress={openCategories} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowItem left="Schedule" right={scheduleText} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
               </View>
             </>
           )}

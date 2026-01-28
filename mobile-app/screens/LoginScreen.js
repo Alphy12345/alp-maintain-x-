@@ -12,9 +12,11 @@ import {
 
 import { getCurrentUser, loginWithUsernamePassword } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LoginScreen({ onLoggedIn }) {
   const { setUser } = useAuth();
+  const { colors } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,47 +48,49 @@ export default function LoginScreen({ onLoggedIn }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Sign in</Text>
-        <Text style={styles.subtitle}>Login with your username and password</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Sign in</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedText }]}>Login with your username and password</Text>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>Username</Text>
           <TextInput
             value={username}
             onChangeText={setUsername}
             placeholder="Enter username"
+            placeholderTextColor="#9ca3af"
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="username"
             inputMode="text"
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             editable={!isSubmitting}
             returnKeyType="next"
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Password</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>Password</Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
             placeholder="Enter password"
+            placeholderTextColor="#9ca3af"
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="password"
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             editable={!isSubmitting}
             returnKeyType="done"
             onSubmitEditing={onSubmit}
           />
         </View>
 
-        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && <Text style={[styles.error, { color: colors.dangerText }]}>{error}</Text>}
 
         <Pressable
           onPress={onSubmit}

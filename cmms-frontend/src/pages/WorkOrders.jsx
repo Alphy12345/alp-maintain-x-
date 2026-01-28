@@ -81,6 +81,12 @@ const WorkOrders = () => {
     description: null,
     fields: [],
   });
+  const [calendarMoreModal, setCalendarMoreModal] = useState({
+    open: false,
+    dayKey: '',
+    dateIso: '',
+    items: [],
+  });
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState(null);
   const workOrderDetailsRef = useRef(null);
   const [activeTab, setActiveTab] = useState('todo');
@@ -281,6 +287,13 @@ const WorkOrders = () => {
         const recurrenceWeekOfMonth = wo.recurrence_week_of_month ?? wo.recurrenceWeekOfMonth;
         const recurrenceWeekday = wo.recurrence_weekday ?? wo.recurrenceWeekday;
 
+        const assignedUser = wo.assigned_user || wo.assignedUser || null;
+        const assigneeName =
+          assignedUser?.user_name ||
+          assignedUser?.name ||
+          assignedUser?.username ||
+          '';
+
         return {
           id: idStr,
           title: wo.name || '',
@@ -313,7 +326,8 @@ const WorkOrders = () => {
             ? wo.part_ids.map((id) => String(id))
             : (Array.isArray(wo.parts) ? wo.parts.map((p) => String(p?.id)).filter(Boolean) : []),
           status: normalizeStatus(rawStatus),
-          assigneeId: wo.assignee_id ? String(wo.assignee_id) : (wo.assigneeId ? String(wo.assigneeId) : ''),
+          assigneeId: wo.assigned_user_id ? String(wo.assigned_user_id) : (wo.assignee_id ? String(wo.assignee_id) : (wo.assigneeId ? String(wo.assigneeId) : '')),
+          assigneeName,
         };
       });
       setWorkOrders(mapped);
@@ -332,6 +346,29 @@ const WorkOrders = () => {
     fetchProcedures();
     fetchVendors();
     fetchWorkOrders();
+  }, []);
+
+  useEffect(() => {
+    let es;
+    try {
+      es = new EventSource(`${API_BASE_URL}/events/work-orders`);
+
+      const onWorkOrderEvent = () => {
+        fetchWorkOrders();
+      };
+
+      es.addEventListener('work_order', onWorkOrderEvent);
+
+      return () => {
+        try {
+          es.removeEventListener('work_order', onWorkOrderEvent);
+          es.close();
+        } catch {
+        }
+      };
+    } catch {
+      return undefined;
+    }
   }, []);
 
   const handleCreateCategoryFromWorkOrder = async () => {
@@ -387,8 +424,20 @@ const WorkOrders = () => {
   };
 
   const getAssigneeName = (assigneeId) => {
-    const user = users.find(u => u.id === assigneeId);
-    return user?.name || 'Unassigned';
+    const id = assigneeId === null || assigneeId === undefined ? '' : String(assigneeId);
+    if (!id) return 'Unassigned';
+    const user = (Array.isArray(users) ? users : []).find((u) => String(u?.id) === id);
+    return user?.user_name || user?.name || user?.username || 'Unassigned';
+  };
+
+  const getAssigneeLabel = (wo) => {
+    if (!wo) return 'Unassigned';
+    const direct = String(wo?.assigneeName || '').trim();
+    if (direct) return direct;
+    const fromUsers = getAssigneeName(wo?.assigneeId);
+    if (fromUsers && fromUsers !== 'Unassigned') return fromUsers;
+    const id = wo?.assigneeId === null || wo?.assigneeId === undefined ? '' : String(wo.assigneeId).trim();
+    return id ? `User #${id}` : 'Unassigned';
   };
 
   const getCategoryName = (categoryId) => {
@@ -1602,7 +1651,7 @@ const WorkOrders = () => {
       priority: createForm.priority,
       location: location?.name || locationName,
       team_id: teamId ? parseInt(teamId, 10) : null,
-      assignee_id: Number.isFinite(numericAssigneeId) ? numericAssigneeId : null,
+      assigned_user_id: Number.isFinite(numericAssigneeId) ? numericAssigneeId : null,
       asset_id: assetId ? parseInt(assetId, 10) : null,
       procedure_id: hasNumericProcedureId ? numericProcedureId : null,
       vendor_id: Number.isFinite(numericVendorId) ? numericVendorId : null,
@@ -2090,6 +2139,9 @@ const WorkOrders = () => {
             {calendarDays.map((d) => {
               const key = dayKey(d);
               const items = workOrdersByDay.get(key) || [];
+              const maxVisible = calendarMode === 'month' ? 1 : 50;
+              const visibleItems = (items || []).slice(0, maxVisible);
+              const hiddenItems = (items || []).slice(maxVisible);
               const inMonth = d.getMonth() === calendarAnchorDate.getMonth();
               const today = new Date();
               const isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
@@ -2111,8 +2163,8 @@ const WorkOrders = () => {
                       <div className="text-[11px] text-gray-500">{items.length}</div>
                     ) : null}
                   </div>
-                  <div className="mt-2 space-y-1 max-h-[110px] overflow-y-auto pr-1">
-                    {items.map((wo) => (
+                  <div className={`mt-2 space-y-1 ${calendarMode === 'month' ? '' : 'max-h-[110px] overflow-y-auto pr-1'}`}>
+                    {visibleItems.map((wo) => (
                       <button
                         key={wo.__occKey || wo.id}
                         type="button"
@@ -2170,6 +2222,28 @@ const WorkOrders = () => {
                         </div>
                       </button>
                     ))}
+                    {calendarMode === 'month' && hiddenItems.length > 0 ? (
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCalendarMoreModal({
+                            open: true,
+                            dayKey: key,
+                            dateIso,
+                            items: hiddenItems,
+                          });
+                        }}
+                        className="w-full text-left text-[11px] font-medium text-primary-600 hover:text-primary-700 px-2"
+                      >
+                        +{hiddenItems.length} more
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -2360,7 +2434,7 @@ const WorkOrders = () => {
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <div>
                       <dt className="text-xs font-medium text-gray-500">Assigned To</dt>
-                      <dd className="text-sm text-gray-900 mt-1">{getAssigneeName(selectedWorkOrder.assigneeId)}</dd>
+                      <dd className="text-sm text-gray-900 mt-1">{getAssigneeLabel(selectedWorkOrder)}</dd>
                     </div>
                     <div>
                       <dt className="text-xs font-medium text-gray-500">Team</dt>
@@ -3097,6 +3171,47 @@ const WorkOrders = () => {
               {saving ? (workOrderMode === 'edit' ? 'Saving…' : 'Creating…') : (workOrderMode === 'edit' ? 'Save' : 'Create')}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(calendarMoreModal?.open)}
+        onClose={() => setCalendarMoreModal({ open: false, dayKey: '', dateIso: '', items: [] })}
+        title={calendarMoreModal?.dateIso ? `Work Orders - ${calendarMoreModal.dateIso}` : 'Work Orders'}
+        size="sm"
+      >
+        <div className="space-y-2">
+          {(calendarMoreModal?.items || []).length === 0 ? (
+            <div className="text-sm text-gray-600">No work orders</div>
+          ) : (
+            <div className="divide-y divide-gray-100 border border-gray-200 rounded-md overflow-hidden">
+              {(calendarMoreModal.items || []).map((wo) => (
+                <button
+                  key={wo.__occKey || wo.id}
+                  type="button"
+                  onClick={() => {
+                    setViewMode('list');
+                    setSelectedWorkOrderId(wo.id);
+                    setCalendarMoreModal({ open: false, dayKey: '', dateIso: '', items: [] });
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 truncate">{wo.title || wo.id}</div>
+                      <div className="mt-0.5 text-[11px] text-gray-600">
+                        <div><span className="font-medium">Start:</span> {formatShort(wo?.startDate || wo?.scheduledDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
+                        <div><span className="font-medium">Due:</span> {formatShort(wo?.dueDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      {getPriorityBadge(wo.priority)}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 

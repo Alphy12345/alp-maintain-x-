@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from db import get_db
-from datetime import date
+from datetime import date, datetime
 
-from models.models import Procedure, ProcedureExecution, ProcedureField, ProcedureFieldValue, ProcedureSection, WorkOrder
+from models.models import Procedure, ProcedureExecution, ProcedureField, ProcedureFieldValue, ProcedureSection, User, WorkOrder
 from routes.auth import get_current_user
 from pydantic_schema.request import ProcedureCreate, ProcedureSaveRequest, ProcedureUpdate
 from pydantic_schema.response import ProcedureOut
+from events import publish_output_data_event
 
 router = APIRouter(prefix="/procedures", tags=["procedures"])
 
@@ -66,10 +67,14 @@ def save_procedure_values(
     if not asset_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No asset assigned to this work order")
 
+    next_status = (payload.status or "in_progress").strip().lower()
+
     execution = (
         db.query(ProcedureExecution)
         .filter(ProcedureExecution.work_order_id == work_order.id)
         .filter(ProcedureExecution.procedure_id == procedure_id)
+        .filter(ProcedureExecution.status != "completed")
+        .order_by(ProcedureExecution.id.desc())
         .first()
     )
 
@@ -80,16 +85,60 @@ def save_procedure_values(
             asset_id=asset_id,
             performed_by=current_user.id,
             performed_at=date.today(),
-            status=payload.status or "in_progress",
+            status="in_progress" if next_status in {"in_progress", "in progress"} else next_status,
+            started_at=datetime.utcnow(),
         )
         db.add(execution)
         db.commit()
         db.refresh(execution)
     else:
-        execution.status = payload.status or execution.status
-        execution.performed_by = execution.performed_by or current_user.id
+        execution.status = "in_progress" if next_status in {"in_progress", "in progress"} else next_status
+        execution.performed_by = current_user.id
         execution.performed_at = execution.performed_at or date.today()
+        if not execution.started_at:
+            execution.started_at = datetime.utcnow()
         db.commit()
+
+    if next_status in {"completed", "done"}:
+        if not execution.completed_at:
+            execution.completed_at = datetime.utcnow()
+        if execution.started_at and not execution.duration_seconds:
+            execution.duration_seconds = int((execution.completed_at - execution.started_at).total_seconds())
+        execution.status = "completed"
+        db.commit()
+
+        wo = db.query(WorkOrder).filter(WorkOrder.id == execution.work_order_id).first() if execution.work_order_id else None
+        proc = db.query(Procedure).filter(Procedure.id == execution.procedure_id).first() if execution.procedure_id else None
+        user = db.query(User).filter(User.id == execution.performed_by).first() if execution.performed_by else None
+        rows = (
+            db.query(ProcedureFieldValue, ProcedureField)
+            .join(ProcedureField, ProcedureField.id == ProcedureFieldValue.field_id)
+            .filter(ProcedureFieldValue.execution_id == execution.id)
+            .all()
+        )
+        fields = [
+            {
+                "field_id": f.id,
+                "label": f.label,
+                "field_type": f.field_type,
+                "value": (fv.value or ""),
+            }
+            for fv, f in rows
+        ]
+        publish_output_data_event(
+            {
+                "execution_id": execution.id,
+                "work_order_id": execution.work_order_id,
+                "work_order_name": wo.name if wo else None,
+                "procedure_id": execution.procedure_id,
+                "procedure_name": proc.name if proc else None,
+                "performed_by": execution.performed_by,
+                "performed_by_name": user.user_name if user else None,
+                "status": execution.status,
+                "performed_at": execution.performed_at.isoformat() if execution.performed_at else None,
+                "fields": fields,
+            }
+        )
 
     saved = 0
     for item in payload.values or []:
