@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Box } from '@mui/material';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import useStore from '../../store/useStore';
@@ -12,17 +13,17 @@ const Layout = ({ children }) => {
   }, [darkMode]);
 
   return (
-    <div className="h-screen overflow-hidden lg:flex bg-gray-50 dark:bg-gray-950">
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
       <Sidebar />
 
-      <div className="flex-1 min-w-0 flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
+      <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
         <TopBar />
-        
-        <main className="p-6 flex-1 overflow-y-auto text-gray-900 dark:text-gray-100">
+
+        <Box component="main" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
           {children}
-        </main>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

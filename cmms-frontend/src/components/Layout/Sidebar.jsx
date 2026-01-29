@@ -1,17 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  Wrench, 
-  Package, 
-  Tags,
+import { Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, useMediaQuery } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
+import {
+  BarChart3,
   Boxes,
-  BarChart3, 
-  Menu,
-  X,
-  Users,
+  FileText,
+  Package,
+  Tags,
   Truck,
-  FileText
+  Users,
+  Wrench
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -30,67 +30,70 @@ const navigation = [
 const Sidebar = () => {
   const { sidebarOpen, toggleSidebar } = useStore();
 
+  const theme = useTheme();
+  const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
+  const drawerWidth = 288;
+
   return (
-    <>
-      {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
+    <Drawer
+      variant={isLgUp ? 'permanent' : 'temporary'}
+      open={isLgUp ? true : sidebarOpen}
+      onClose={isLgUp ? undefined : toggleSidebar}
+      ModalProps={{ keepMounted: true }}
+      sx={{
+        width: drawerWidth,
+        flexShrink: 0,
+        '& .MuiDrawer-paper': {
+          width: drawerWidth,
+          boxSizing: 'border-box',
+        },
+        display: { xs: 'block', lg: 'block' },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', height: 64, px: 2 }}>
+        <Box sx={{ flexGrow: 1 }} />
+        {!isLgUp ? (
+          <IconButton onClick={toggleSidebar} aria-label="close sidebar">
+            <CloseIcon />
+          </IconButton>
+        ) : null}
+      </Box>
+      <Divider />
 
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white dark:bg-gray-950 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-800">
-          <div />
-          <button
-            onClick={toggleSidebar}
-            className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <Box sx={{ p: 1.5, flex: 1, overflowY: 'auto' }}>
+        <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {navigation.map((item) => {
+            const Icon = item.icon;
 
-        <nav className="flex-1 overflow-y-auto px-3 py-6">
-          <ul className="space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <li key={item.name}>
-                  <NavLink
-                    to={item.href}
-                    className={({ isActive }) => `
-                      flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                      ${isActive
-                        ? 'bg-gray-900/40 text-white border-r-2 border-primary-500'
-                        : 'text-gray-300 hover:bg-gray-900/30 hover:text-white'
-                      }
-                    `}
-                    onClick={() => {
-                      // Close mobile sidebar after navigation
-                      if (window.innerWidth < 1024) {
-                        toggleSidebar();
-                      }
-                    }}
-                  >
-                    <Icon className="mr-3 h-5 w-5" />
-                    {item.name}
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        </div>
-      </div>
-    </>
+            return (
+              <ListItemButton
+                key={item.name}
+                component={NavLink}
+                to={item.href}
+                onClick={() => {
+                  if (!isLgUp) toggleSidebar();
+                }}
+                sx={{
+                  borderRadius: 2,
+                  '&.active': {
+                    bgcolor: 'action.selected',
+                    color: 'text.primary',
+                    '& .MuiListItemIcon-root': { color: 'primary.main' },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={18} />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText primary={item.name} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
+            );
+          })}
+        </List>
+      </Box>
+    </Drawer>
   );
 };
 

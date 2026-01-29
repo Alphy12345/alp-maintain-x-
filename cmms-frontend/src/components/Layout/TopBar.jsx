@@ -1,27 +1,30 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { AppBar, Box, IconButton, Toolbar } from '@mui/material';
+import { Brightness4, Brightness7, Menu as MenuIcon } from '@mui/icons-material';
 import useStore from '../../store/useStore';
 
 const TopBar = () => {
-  const { toggleSidebar } = useStore();
+  const { toggleSidebar, darkMode, toggleDarkMode } = useStore();
 
   return (
-    <header className="sticky top-0 z-30 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between h-16">
-        {/* Left side */}
-        <div className="flex items-center">
-          <button
-            onClick={toggleSidebar}
-            className="p-1 rounded-md text-gray-400 hover:text-gray-600 lg:hidden"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-        </div>
+    <AppBar position="sticky" elevation={0} color="transparent" sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Toolbar sx={{ px: { xs: 1, sm: 2, lg: 3 } }}>
+        <IconButton
+          onClick={toggleSidebar}
+          edge="start"
+          aria-label="open sidebar"
+          sx={{ display: { lg: 'none' }, mr: 1 }}
+        >
+          <MenuIcon />
+        </IconButton>
 
-        {/* Right side */}
-        <div />
-      </div>
-    </header>
+        <Box sx={{ flexGrow: 1 }} />
+
+        <IconButton onClick={toggleDarkMode} aria-label="toggle theme">
+          {darkMode ? <Brightness7 /> : <Brightness4 />}
+        </IconButton>
+      </Toolbar>
+    </AppBar>
   );
 };
 

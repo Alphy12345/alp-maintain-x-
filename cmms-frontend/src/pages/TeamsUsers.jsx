@@ -1,7 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, MoreVertical, Plus } from 'lucide-react';
 import axios from 'axios';
-import { Button, Modal } from '../components';
+import {
+  Alert,
+  Box,
+  Button as MuiButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
@@ -397,469 +422,403 @@ const TeamsUsers = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Teams / Users</h1>
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+          Teams / Users
+        </Typography>
 
-        <div className="flex items-center gap-3">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={tab === 'teams' ? 'Search Teams' : 'Search Users'}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm"
-            />
-          </div>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+          <TextField
+            size="small"
+            placeholder={tab === 'teams' ? 'Search Teams' : 'Search Users'}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
 
           {tab === 'teams' ? (
-            <Button onClick={openCreateTeam} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
+            <MuiButton variant="contained" onClick={openCreateTeam} startIcon={<Plus size={18} />}>
               New Team
-            </Button>
+            </MuiButton>
           ) : (
-            <Button onClick={openCreateUser} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
+            <MuiButton variant="contained" onClick={openCreateUser} startIcon={<Plus size={18} />}>
               Add User
-            </Button>
+            </MuiButton>
           )}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            type="button"
-            onClick={() => setTab('users')}
-            className={`py-2 px-1 border-b-2 text-sm font-medium transition-colors ${
-              tab === 'users'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Users
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('teams')}
-            className={`py-2 px-1 border-b-2 text-sm font-medium transition-colors ${
-              tab === 'teams'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Teams
-          </button>
-        </nav>
-      </div>
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="users" label="Users" />
+        <Tab value="teams" label="Teams" />
+      </Tabs>
 
       {tab === 'users' ? (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <Paper variant="outlined">
           {usersError ? (
-            <div className="p-4 border-b border-gray-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-              <div>{usersError}</div>
-              <button
-                type="button"
-                onClick={() => fetchUsers()}
-                className="text-sm font-medium text-red-700 hover:text-red-800"
-              >
-                Retry
-              </button>
-            </div>
+            <Alert
+              severity="error"
+              action={(
+                <MuiButton color="inherit" size="small" onClick={() => fetchUsers()}>
+                  Retry
+                </MuiButton>
+              )}
+            >
+              {usersError}
+            </Alert>
           ) : null}
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teams</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Full Name</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Teams</TableCell>
+                  <TableCell>Last Visit</TableCell>
+                  <TableCell align="right" />
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {loadingUsers ? (
-                  <tr>
-                    <td className="px-6 py-10 text-sm text-gray-500" colSpan={5}>
-                      Loading users…
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Typography variant="body2" color="text.secondary">Loading users…</Typography>
+                    </TableCell>
+                  </TableRow>
                 ) : filteredUsers.length === 0 ? (
-                  <tr>
-                    <td className="px-6 py-10 text-sm text-gray-500" colSpan={5}>
-                      No users found.
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Typography variant="body2" color="text.secondary">No users found.</Typography>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredUsers.map((u) => (
-                    <tr key={u.id} className="bg-white">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-semibold text-primary-700">
+                    <TableRow key={u.id} hover>
+                      <TableCell>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          <Box sx={{ width: 32, height: 32, borderRadius: '999px', bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'primary.main' }}>
                             {String(u?.user_name || 'U').trim().slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">{u?.user_name || 'User'}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{u?.role || ''}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="inline-flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEditUser(u)}
-                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                          >
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {u?.user_name || 'User'}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>{u?.role || ''}</TableCell>
+                      <TableCell />
+                      <TableCell />
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <MuiButton size="small" variant="text" onClick={() => openEditUser(u)}>
                             Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUser(u)}
-                            className="text-sm text-red-600 hover:text-red-700 font-medium"
-                          >
+                          </MuiButton>
+                          <MuiButton size="small" color="error" variant="text" onClick={() => handleDeleteUser(u)}>
                             Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </MuiButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-end px-4 py-3 text-xs text-gray-500 border-t border-gray-200">
-            1 – 1 of 1
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <Paper variant="outlined">
           {teamsError ? (
-            <div className="p-4 border-b border-gray-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-              <div>{teamsError}</div>
-              <button
-                type="button"
-                onClick={() => fetchTeams()}
-                className="text-sm font-medium text-red-700 hover:text-red-800"
-              >
-                Retry
-              </button>
-            </div>
+            <Alert
+              severity="error"
+              action={(
+                <MuiButton color="inherit" size="small" onClick={() => fetchTeams()}>
+                  Retry
+                </MuiButton>
+              )}
+            >
+              {teamsError}
+            </Alert>
           ) : null}
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Team Name</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell align="right" />
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {loadingTeams ? (
-                  <tr>
-                    <td className="px-6 py-10 text-sm text-gray-500" colSpan={3}>
-                      Loading teams…
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={3}>
+                      <Typography variant="body2" color="text.secondary">Loading teams…</Typography>
+                    </TableCell>
+                  </TableRow>
                 ) : filteredTeams.length === 0 ? (
-                  <tr>
-                    <td className="px-6 py-10 text-sm text-gray-500" colSpan={3}>
-                      No teams found.
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={3}>
+                      <Typography variant="body2" color="text.secondary">No teams found.</Typography>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredTeams.map((t) => (
-                    <tr key={t.id} className="bg-white">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.team_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{t.description || ''}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="inline-flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openMembers(t)}
-                            className="text-sm text-gray-900 hover:text-gray-700 font-medium"
-                          >
+                    <TableRow key={t.id} hover>
+                      <TableCell sx={{ fontWeight: 600 }}>{t.team_name}</TableCell>
+                      <TableCell>{t.description || ''}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                          <MuiButton size="small" variant="text" color="inherit" onClick={() => openMembers(t)}>
                             Add User
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditTeam(t)}
-                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                          >
+                          </MuiButton>
+                          <MuiButton size="small" variant="text" onClick={() => openEditTeam(t)}>
                             Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTeam(t.id)}
-                            className="text-sm text-red-600 hover:text-red-700 font-medium"
-                          >
+                          </MuiButton>
+                          <MuiButton size="small" color="error" variant="text" onClick={() => handleDeleteTeam(t.id)}>
                             Delete
-                          </button>
-                          <button type="button" className="p-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-200">
-                            <MoreVertical className="w-4 h-4 text-gray-500" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </MuiButton>
+                          <MuiButton size="small" variant="outlined" color="inherit" sx={{ minWidth: 0, px: 1 }}>
+                            <MoreVertical size={16} />
+                          </MuiButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       )}
 
-      <Modal
-        isOpen={showTeamModal}
-        onClose={() => setShowTeamModal(false)}
-        title={teamMode === 'create' ? 'New Team' : 'Edit Team'}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
-            <input
+      <Dialog open={showTeamModal} onClose={() => setShowTeamModal(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{teamMode === 'create' ? 'New Team' : 'Edit Team'}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Team Name"
               value={teamForm.team_name}
               onChange={(e) => setTeamForm((p) => ({ ...p, team_name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Team name"
+              fullWidth
+              required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
+            <TextField
+              label="Description"
               value={teamForm.description}
               onChange={(e) => setTeamForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Description"
+              fullWidth
+              multiline
+              minRows={3}
             />
-          </div>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton variant="outlined" color="inherit" onClick={() => setShowTeamModal(false)}>
+            Cancel
+          </MuiButton>
+          <MuiButton variant="contained" onClick={handleSaveTeam} disabled={savingTeam || !String(teamForm.team_name || '').trim()}>
+            {savingTeam ? 'Saving…' : 'Save'}
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowTeamModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveTeam} disabled={savingTeam || !String(teamForm.team_name || '').trim()}>
-              {savingTeam ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={showUserModal}
-        onClose={closeUserModal}
-        title={userMode === 'edit' ? 'Edit User' : 'Add User'}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-            <input
+      <Dialog open={showUserModal} onClose={closeUserModal} fullWidth maxWidth="sm">
+        <DialogTitle>{userMode === 'edit' ? 'Edit User' : 'Add User'}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Username"
               value={userForm.user_name}
               onChange={(e) => setUserForm((p) => ({ ...p, user_name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Username"
+              fullWidth
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
+            <TextField
+              label="Password"
               type="password"
               value={userForm.password}
               onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Password"
+              fullWidth
+              helperText={userMode === 'create' ? 'Password is required when creating a user.' : 'Leave blank to keep existing password.'}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              value={userForm.role}
-              onChange={(e) => setUserForm((p) => ({ ...p, role: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="admin">admin</option>
-              <option value="user">user</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={closeUserModal}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveUser}
-              disabled={
-                savingUser ||
-                !String(userForm.user_name || '').trim() ||
-                !String(userForm.role || '').trim() ||
-                (userMode === 'create' && !String(userForm.password || '').trim())
-              }
-            >
-              {savingUser ? 'Saving…' : userMode === 'edit' ? 'Save' : 'Add User'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={showMembersModal}
-        onClose={() => { setShowMembersModal(false); setMembersError(''); cancelEditMember(); }}
-        title={selectedTeamForMembers ? `Team: ${selectedTeamForMembers.team_name}` : 'Team Members'}
-        size="lg"
-      >
-        <div className="space-y-4">
-          {membersError ? (
-            <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm">
-              {membersError}
-            </div>
-          ) : null}
-
-          <div className="rounded-md border border-gray-200 bg-white">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-900">Members</div>
-              <button
-                type="button"
-                onClick={() => selectedTeamForMembers?.id ? fetchTeamMembers(selectedTeamForMembers.id) : fetchTeamUserLinks()}
-                className="text-sm text-gray-600 hover:text-gray-800"
-                disabled={loadingMembers || savingMember}
+            <FormControl fullWidth>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>Role</Typography>
+              <Select
+                value={userForm.role}
+                onChange={(e) => setUserForm((p) => ({ ...p, role: e.target.value }))}
+                size="small"
               >
-                Refresh
-              </button>
-            </div>
+                <MenuItem value="admin">admin</MenuItem>
+                <MenuItem value="user">user</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton variant="outlined" color="inherit" onClick={closeUserModal}>
+            Cancel
+          </MuiButton>
+          <MuiButton
+            variant="contained"
+            onClick={handleSaveUser}
+            disabled={
+              savingUser ||
+              !String(userForm.user_name || '').trim() ||
+              !String(userForm.role || '').trim() ||
+              (userMode === 'create' && !String(userForm.password || '').trim())
+            }
+          >
+            {savingUser ? 'Saving…' : userMode === 'edit' ? 'Save' : 'Add User'}
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {loadingMembers ? (
-                    <tr>
-                      <td className="px-4 py-8 text-sm text-gray-500" colSpan={3}>Loading members…</td>
-                    </tr>
-                  ) : (teamMembers || []).length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-8 text-sm text-gray-500" colSpan={3}>No members in this team.</td>
-                    </tr>
-                  ) : (
-                    (teamMembers || []).map((m) => {
-                      const isEditing = Boolean(editingMembership?.oldUserId && editingMembership.oldUserId === String(m?.id));
-                      return (
-                        <tr key={m.id}>
-                          <td className="px-4 py-3 text-sm text-gray-900">{m.user_name || String(m.id)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{m.role || ''}</td>
-                          <td className="px-4 py-3 text-right">
-                            {isEditing ? (
-                              <div className="inline-flex items-center gap-2">
-                                <select
-                                  value={editingNewUserId}
-                                  onChange={(e) => setEditingNewUserId(e.target.value)}
-                                  className="px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
-                                >
-                                  <option value="">Select new user</option>
-                                  {(users || []).filter((u) => String(u?.id) !== String(m?.id)).map((u) => (
-                                    <option key={u.id} value={u.id}>{u.user_name || String(u.id)}</option>
-                                  ))}
-                                </select>
-                                <button
-                                  type="button"
-                                  onClick={handleSaveEditMember}
-                                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                                  disabled={savingMember || !editingNewUserId}
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelEditMember}
-                                  className="text-sm text-gray-600 hover:text-gray-800"
-                                  disabled={savingMember}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center gap-3">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditMember(m)}
-                                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                                  disabled={savingMember}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteMember(m.id)}
-                                  className="text-sm text-red-600 hover:text-red-700 font-medium"
-                                  disabled={savingMember}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <Dialog
+        open={showMembersModal}
+        onClose={() => { setShowMembersModal(false); setMembersError(''); cancelEditMember(); }}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>{selectedTeamForMembers ? `Team: ${selectedTeamForMembers.team_name}` : 'Team Members'}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {membersError ? <Alert severity="error">{membersError}</Alert> : null}
 
-          <div className="rounded-md border border-gray-200 bg-white p-4">
-            <div className="text-sm font-semibold text-gray-900">Add user to team</div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
-                <select
-                  value={memberUserId}
-                  onChange={(e) => setMemberUserId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
+            <Paper variant="outlined">
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Members</Typography>
+                <MuiButton
+                  size="small"
+                  variant="text"
+                  onClick={() => selectedTeamForMembers?.id ? fetchTeamMembers(selectedTeamForMembers.id) : fetchTeamUserLinks()}
+                  disabled={loadingMembers || savingMember}
                 >
-                  <option value="">Select user</option>
-                  {availableUsersForTeam.map((u) => (
-                    <option key={u.id} value={u.id}>{u.user_name || String(u.id)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Button
-                  onClick={handleAddMember}
-                  disabled={savingMember || !memberUserId || !selectedTeamForMembers?.id}
-                  className="w-full"
-                >
-                  {savingMember ? 'Saving…' : 'Add User'}
-                </Button>
-              </div>
-            </div>
-          </div>
+                  Refresh
+                </MuiButton>
+              </Stack>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setShowMembersModal(false); setMembersError(''); cancelEditMember(); }}>
-              Close
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Role</TableCell>
+                      <TableCell align="right" />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loadingMembers ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Typography variant="body2" color="text.secondary">Loading members…</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (teamMembers || []).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Typography variant="body2" color="text.secondary">No members in this team.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (teamMembers || []).map((m) => {
+                        const isEditing = Boolean(editingMembership?.oldUserId && editingMembership.oldUserId === String(m?.id));
+                        return (
+                          <TableRow key={m.id}>
+                            <TableCell>{m.user_name || String(m.id)}</TableCell>
+                            <TableCell>{m.role || ''}</TableCell>
+                            <TableCell align="right">
+                              {isEditing ? (
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="flex-end">
+                                  <FormControl size="small" sx={{ minWidth: 200 }}>
+                                    <Select
+                                      displayEmpty
+                                      value={editingNewUserId}
+                                      onChange={(e) => setEditingNewUserId(e.target.value)}
+                                    >
+                                      <MenuItem value="">Select new user</MenuItem>
+                                      {(users || []).filter((u) => String(u?.id) !== String(m?.id)).map((u) => (
+                                        <MenuItem key={u.id} value={u.id}>{u.user_name || String(u.id)}</MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                  <MuiButton size="small" variant="text" onClick={handleSaveEditMember} disabled={savingMember || !editingNewUserId}>
+                                    Save
+                                  </MuiButton>
+                                  <MuiButton size="small" variant="text" color="inherit" onClick={cancelEditMember} disabled={savingMember}>
+                                    Cancel
+                                  </MuiButton>
+                                </Stack>
+                              ) : (
+                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                  <MuiButton size="small" variant="text" onClick={() => startEditMember(m)} disabled={savingMember}>
+                                    Edit
+                                  </MuiButton>
+                                  <MuiButton size="small" color="error" variant="text" onClick={() => handleDeleteMember(m.id)} disabled={savingMember}>
+                                    Delete
+                                  </MuiButton>
+                                </Stack>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Add user to team</Typography>
+              <Grid container spacing={2} alignItems="flex-end" sx={{ mt: 0.5 }}>
+                <Grid item xs={12} md={8}>
+                  <FormControl fullWidth size="small">
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>User</Typography>
+                    <Select
+                      displayEmpty
+                      value={memberUserId}
+                      onChange={(e) => setMemberUserId(e.target.value)}
+                    >
+                      <MenuItem value="">Select user</MenuItem>
+                      {availableUsersForTeam.map((u) => (
+                        <MenuItem key={u.id} value={u.id}>{u.user_name || String(u.id)}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <MuiButton
+                    fullWidth
+                    variant="contained"
+                    onClick={handleAddMember}
+                    disabled={savingMember || !memberUserId || !selectedTeamForMembers?.id}
+                  >
+                    {savingMember ? 'Saving…' : 'Add User'}
+                  </MuiButton>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton variant="outlined" color="inherit" onClick={() => { setShowMembersModal(false); setMembersError(''); cancelEditMember(); }}>
+            Close
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 };
 

@@ -76,6 +76,10 @@ def init_db():
                 conn.execute(text("ALTER TABLE work_orders ADD COLUMN assigned_user_id INTEGER"))
             if not _column_exists(conn, "work_orders", "status"):
                 conn.execute(text("ALTER TABLE work_orders ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'open'"))
+            if not _column_exists(conn, "work_orders", "created_at"):
+                conn.execute(text("ALTER TABLE work_orders ADD COLUMN created_at TIMESTAMP"))
+            if not _column_exists(conn, "work_orders", "completed_at"):
+                conn.execute(text("ALTER TABLE work_orders ADD COLUMN completed_at TIMESTAMP"))
 
         if not _table_exists(conn, "team_users"):
             conn.execute(

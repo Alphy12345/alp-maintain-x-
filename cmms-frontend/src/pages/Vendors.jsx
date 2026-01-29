@@ -2,7 +2,22 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, BookUser } from 'lucide-react';
 import axios from 'axios';
-import { Button } from '../components';
+import {
+  Alert,
+  Box,
+  Button,
+  InputAdornment,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
@@ -54,111 +69,111 @@ const Vendors = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
-        </div>
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+          Vendors
+        </Typography>
 
-        <div className="flex items-center gap-3">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search Vendors"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm"
-            />
-          </div>
-
-          <Button onClick={() => navigate('/vendors/create')} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search Vendors"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => navigate('/vendors/create')}
+            startIcon={<Plus size={18} />}
+          >
             New Vendor
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="bg-white rounded-lg border border-gray-200 min-h-[640px]">
-        {error ? (
-          <div className="p-4">
-            <div className="text-sm text-red-600">{error}</div>
-            <button
-              type="button"
-              onClick={() => fetchVendors()}
-              className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
+      {error ? (
+        <Alert
+          severity="error"
+          action={(
+            <Button color="inherit" size="small" onClick={() => fetchVendors()}>
               Retry
-            </button>
-          </div>
-        ) : null}
+            </Button>
+          )}
+        >
+          {error}
+        </Alert>
+      ) : null}
 
+      <Paper variant="outlined" sx={{ minHeight: 640 }}>
         {loading ? (
-          <div className="p-8 text-sm text-gray-600">Loading vendors…</div>
+          <Box sx={{ p: 3 }}>
+            <Typography variant="body2" color="text.secondary">Loading vendors…</Typography>
+          </Box>
         ) : filtered.length === 0 ? (
-          <div className="min-h-[640px] flex items-center justify-center">
-            <div className="text-center px-6">
-              <div className="mx-auto w-20 h-20 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                <BookUser className="w-10 h-10 text-primary-700" />
-              </div>
-              <h2 className="mt-6 text-lg font-semibold text-gray-900">Start adding Vendors to your account</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Click the "+ New Vendor" button in the top right to get started
-              </p>
-            </div>
-          </div>
+          <Box sx={{ minHeight: 640, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
+            <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center', maxWidth: 520 }}>
+              <Box sx={{ width: 80, height: 80, borderRadius: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BookUser size={40} />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, mt: 1 }}>
+                Start adding Vendors to your account
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Click the "New Vendor" button to get started
+              </Typography>
+            </Stack>
+          </Box>
         ) : (
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600">{filtered.length} vendor(s)</div>
-              <button
-                type="button"
-                onClick={() => fetchVendors()}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
+          <Box sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                {filtered.length} vendor(s)
+              </Typography>
+              <Button size="small" variant="text" onClick={() => fetchVendors()}>
                 Refresh
-              </button>
-            </div>
+              </Button>
+            </Stack>
 
-            <div className="overflow-hidden rounded-md border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Name</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wide">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {filtered.map((v) => (
-                    <tr key={v.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">{v.name}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/vendors/${v.id}/edit`)}
-                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                          >
+                    <TableRow key={v.id} hover>
+                      <TableCell>{v.name}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <Button size="small" variant="text" onClick={() => navigate(`/vendors/${v.id}/edit`)}>
                             Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(v.id)}
-                            className="text-sm text-red-600 hover:text-red-700 font-medium"
-                          >
+                          </Button>
+                          <Button size="small" color="error" variant="text" onClick={() => handleDelete(v.id)}>
                             Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </Button>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
         )}
-      </div>
-    </div>
+      </Paper>
+    </Stack>
   );
 };
 

@@ -9,6 +9,7 @@ from sqlalchemy import (
     Float,
     DateTime,
 )
+from datetime import datetime
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
@@ -147,6 +148,9 @@ class WorkOrder(Base):
 
     estimated_time_hours = Column(Integer)
     estimated_time_minutes = Column(Integer)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
 
     due_date = Column(Date)
     start_date = Column(Date)

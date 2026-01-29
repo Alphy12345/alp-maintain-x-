@@ -26,12 +26,6 @@
     color-scheme: light;
   }
 
-  *:focus,
-  *:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
   ::selection {
     background: transparent;
   }

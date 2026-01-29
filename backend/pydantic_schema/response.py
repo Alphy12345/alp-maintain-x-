@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -105,6 +105,8 @@ class WorkOrderOut(BaseModel):
     description: Optional[str] = None
     estimated_time_hours: Optional[int] = None
     estimated_time_minutes: Optional[int] = None
+    created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     due_date: Optional[date] = None
     start_date: Optional[date] = None
     recurrence: Optional[str] = None

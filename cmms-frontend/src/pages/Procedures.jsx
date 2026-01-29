@@ -2,7 +2,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ChevronDown, Filter, Plus, Search, Trash2, Type, Rows3, SquarePen, Hash, DollarSign, List, ListChecks, ScanSearch, CheckSquare, X } from 'lucide-react';
 import axios from 'axios';
-import { Button, Card, Modal } from '../components';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Divider,
+  FormControl,
+  Grid,
+  InputAdornment,
+  InputLabel,
+  List as MuiList,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { Modal } from '../components';
 import useStore from '../store/useStore';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
@@ -592,197 +612,186 @@ const Procedures = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Procedure Library</h1>
-        </div>
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            Procedure Library
+          </Typography>
+        </Box>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Procedure templates"
-              className="w-80 pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+          <TextField
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Procedure templates"
+            sx={{ width: { xs: '100%', sm: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button variant="contained" onClick={openCreate} startIcon={<Plus size={18} />}>
             Add Procedure
-            <ChevronDown className="w-4 h-4 ml-2" />
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {error ? (
-        <div className="p-4 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-          <div>{error}</div>
-          <button
-            type="button"
-            onClick={() => fetchProcedures()}
-            className="text-sm font-medium text-red-700 hover:text-red-800"
-          >
-            Retry
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          action={(
+            <Button color="inherit" size="small" onClick={() => fetchProcedures()}>
+              Retry
+            </Button>
+          )}
+        >
+          {error}
+        </Alert>
       ) : null}
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenFilter(openFilter === 'category' ? '' : 'category')}
-            className={`${chipBase} ${filters.categoryId ? 'border-primary-300 text-primary-700' : ''}`}
-          >
-            <Filter className="h-4 w-4 text-gray-400" />
-            Category
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
-          {openFilter === 'category' ? (
-            <div className="absolute z-50 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden">
-              <div className="max-h-64 overflow-y-auto">
-                <button
-                  type="button"
-                  onClick={() => { setFilters((p) => ({ ...p, categoryId: '' })); setOpenFilter(''); }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  Any
-                </button>
-                {loadingFilterOptions && categories.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">Loading…</div>
-                ) : null}
-                {!loadingFilterOptions && categories.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">No categories</div>
-                ) : null}
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { setFilters((p) => ({ ...p, categoryId: String(c.id) })); setOpenFilter(''); }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    {c.name || String(c.id)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenFilter(openFilter === 'asset' ? '' : 'asset')}
-            className={`${chipBase} ${filters.assetId ? 'border-primary-300 text-primary-700' : ''}`}
-          >
-            Asset
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
-          {openFilter === 'asset' ? (
-            <div className="absolute z-50 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden">
-              <div className="max-h-64 overflow-y-auto">
-                <button
-                  type="button"
-                  onClick={() => { setFilters((p) => ({ ...p, assetId: '' })); setOpenFilter(''); }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  Any
-                </button>
-                {loadingFilterOptions && assets.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">Loading…</div>
-                ) : null}
-                {!loadingFilterOptions && assets.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">No assets</div>
-                ) : null}
-                {assets.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => { setFilters((p) => ({ ...p, assetId: String(a.id) })); setOpenFilter(''); }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    {a.asset_name || a.name || String(a.id)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Chip
+          icon={<Filter size={16} />}
+          label={filters.categoryId ? `Category: ${filters.categoryId}` : 'Category'}
+          variant={filters.categoryId ? 'filled' : 'outlined'}
+          onClick={() => setOpenFilter(openFilter === 'category' ? '' : 'category')}
+        />
+        <Chip
+          label={filters.assetId ? `Asset: ${filters.assetId}` : 'Asset'}
+          variant={filters.assetId ? 'filled' : 'outlined'}
+          onClick={() => setOpenFilter(openFilter === 'asset' ? '' : 'asset')}
+        />
         {anyFilterActive ? (
-          <button
-            type="button"
+          <Chip
+            icon={<X size={16} />}
+            label="Clear Filters"
+            variant="outlined"
             onClick={() => { setFilters({ categoryId: '', assetId: '' }); setOpenFilter(''); }}
-            className={chipBase}
-          >
-            <X className="h-4 w-4 text-gray-400" />
-            Clear Filters
-          </button>
+          />
         ) : null}
-      </div>
+      </Stack>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="lg:col-span-4">
-          <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">Procedures ({filtered.length})</div>
-          </div>
-          <div className="max-h-[60vh] overflow-y-auto">
-            {loading ? (
-              <div className="p-6 text-sm text-gray-600">Loading procedures…</div>
-            ) : filtered.length === 0 ? (
-              <div className="px-6 py-16">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="h-20 w-20 rounded-full bg-primary-50 flex items-center justify-center">
-                    <CheckCircle2 className="h-10 w-10 text-primary-600" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-semibold text-gray-900">Start adding Procedures</div>
-                    <div className="text-sm text-gray-600">Click the New Procedure Template button to get started</div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {filtered.map((p) => {
-                  const active = selectedProcedure?.id === p.id;
-                  const assetName = assetsById.get(p.asset_id)?.asset_name || '—';
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSelectedProcedure(p)}
-                      className={`w-full text-left px-4 py-3 ${active ? 'bg-slate-800' : 'bg-transparent'} hover:bg-slate-900`}
-                    >
-                      <div className="text-sm font-semibold text-gray-900 truncate">{p.name}</div>
-                      <div className="mt-1 text-xs text-gray-500 truncate">{assetName}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </Card>
+      {/* Keep existing popover logic for now (category/asset) */}
+      {openFilter === 'category' ? (
+        <Paper variant="outlined" sx={{ p: 1, maxWidth: 360 }}>
+          <MuiList dense>
+            <ListItemButton onClick={() => { setFilters((p) => ({ ...p, categoryId: '' })); setOpenFilter(''); }}>
+              <ListItemText primary="Any" />
+            </ListItemButton>
+            {loadingFilterOptions && categories.length === 0 ? (
+              <ListItemText sx={{ px: 2, py: 1 }} primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }} primary="Loading…" />
+            ) : null}
+            {!loadingFilterOptions && categories.length === 0 ? (
+              <ListItemText sx={{ px: 2, py: 1 }} primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }} primary="No categories" />
+            ) : null}
+            {categories.map((c) => (
+              <ListItemButton key={c.id} onClick={() => { setFilters((p) => ({ ...p, categoryId: String(c.id) })); setOpenFilter(''); }}>
+                <ListItemText primary={c.name || String(c.id)} />
+              </ListItemButton>
+            ))}
+          </MuiList>
+        </Paper>
+      ) : null}
 
-        <Card className="lg:col-span-8">
-          <div className="p-6 min-h-[60vh]">
+      {openFilter === 'asset' ? (
+        <Paper variant="outlined" sx={{ p: 1, maxWidth: 360 }}>
+          <MuiList dense>
+            <ListItemButton onClick={() => { setFilters((p) => ({ ...p, assetId: '' })); setOpenFilter(''); }}>
+              <ListItemText primary="Any" />
+            </ListItemButton>
+            {loadingFilterOptions && assets.length === 0 ? (
+              <ListItemText sx={{ px: 2, py: 1 }} primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }} primary="Loading…" />
+            ) : null}
+            {!loadingFilterOptions && assets.length === 0 ? (
+              <ListItemText sx={{ px: 2, py: 1 }} primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }} primary="No assets" />
+            ) : null}
+            {assets.map((a) => (
+              <ListItemButton key={a.id} onClick={() => { setFilters((p) => ({ ...p, assetId: String(a.id) })); setOpenFilter(''); }}>
+                <ListItemText primary={a.asset_name || a.name || String(a.id)} />
+              </ListItemButton>
+            ))}
+          </MuiList>
+        </Paper>
+      ) : null}
+
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined">
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Procedures ({filtered.length})
+              </Typography>
+            </Stack>
+            <Divider />
+            <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {loading ? (
+                <Box sx={{ p: 3 }}>
+                  <Typography variant="body2" color="text.secondary">Loading procedures…</Typography>
+                </Box>
+              ) : filtered.length === 0 ? (
+                <Box sx={{ px: 3, py: 8 }}>
+                  <Stack spacing={2} alignItems="center" sx={{ textAlign: 'center' }}>
+                    <Box sx={{ width: 80, height: 80, borderRadius: '999px', bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle2 size={40} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Start adding Procedures</Typography>
+                      <Typography variant="body2" color="text.secondary">Click Add Procedure to get started</Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              ) : (
+                <MuiList disablePadding>
+                  {filtered.map((p) => {
+                    const active = selectedProcedure?.id === p.id;
+                    const assetName = assetsById.get(p.asset_id)?.asset_name || '—';
+                    return (
+                      <ListItemButton
+                        key={p.id}
+                        selected={active}
+                        onClick={() => setSelectedProcedure(p)}
+                        sx={{ alignItems: 'flex-start' }}
+                      >
+                        <ListItemText
+                          primary={p.name}
+                          secondary={assetName}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 700, noWrap: true }}
+                          secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </MuiList>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} lg={8}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minHeight: '60vh' }}>
             {!selectedProcedure ? (
-              <div className="h-full flex items-center justify-center text-sm text-gray-500">Select a procedure to view details</div>
+              <Box sx={{ height: '100%', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Select a procedure to view details</Typography>
+              </Box>
             ) : (
-              <div className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-lg font-semibold text-gray-900">{selectedProcedure.name}</div>
-                    <div className="mt-1 text-sm text-gray-600">
+              <Stack spacing={2.5}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedProcedure.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
                       Asset: {assetsById.get(selectedProcedure.asset_id)?.asset_name || '—'}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openEdit(selectedProcedure)}>Edit</Button>
-                    <Button variant="secondary" onClick={() => handleDelete(selectedProcedure.id)}>Delete</Button>
-                  </div>
-                </div>
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1}>
+                    <Button variant="outlined" onClick={() => openEdit(selectedProcedure)}>Edit</Button>
+                    <Button variant="outlined" color="error" onClick={() => handleDelete(selectedProcedure.id)}>Delete</Button>
+                  </Stack>
+                </Stack>
 
                 <div>
                   <div className="text-xs text-gray-500">Description</div>
@@ -967,11 +976,11 @@ const Procedures = () => {
                     <div className="text-sm text-gray-900">0</div>
                   )}
                 </div>
-              </div>
+              </Stack>
             )}
-          </div>
-        </Card>
-      </div>
+          </Paper>
+        </Grid>
+      </Grid>
 
       <Modal
         isOpen={showModal}
@@ -980,53 +989,48 @@ const Procedures = () => {
         size="xl"
       >
         <div className="space-y-4">
-          {error ? (
-            <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm">{error}</div>
-          ) : null}
+          {error ? <Alert severity="error">{error}</Alert> : null}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+          <TextField
+            label="Name"
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            fullWidth
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+          <TextField
+            label="Description"
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            fullWidth
+            multiline
+            minRows={3}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
-            <div className="relative">
-              <select
-                value={form.asset_id}
-                onChange={(e) => setForm((p) => ({ ...p, asset_id: e.target.value }))}
-                className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">Select Asset</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>{a.asset_name || a.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
+          <FormControl fullWidth>
+            <InputLabel id="procedure-asset-label">Asset</InputLabel>
+            <Select
+              labelId="procedure-asset-label"
+              label="Asset"
+              value={form.asset_id}
+              onChange={(e) => setForm((p) => ({ ...p, asset_id: e.target.value }))}
+            >
+              <MenuItem value="">Select Asset</MenuItem>
+              {assets.map((a) => (
+                <MenuItem key={a.id} value={a.id}>{a.asset_name || a.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-9">
-              <div className="rounded-md border border-gray-200 bg-white p-4">
-                <div className="text-sm font-semibold text-gray-900">Procedure Builder</div>
-                <div className="mt-3 space-y-3">
+          <Grid container spacing={2}>
+            <Grid item xs={12} lg={9}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Procedure Builder
+                </Typography>
+                <Stack spacing={2} sx={{ mt: 2 }}>
                   {(Array.isArray(form.sections) ? form.sections : []).length === 0 ? (
-                    <div className="text-sm text-gray-500">Add items from the right panel.</div>
+                    <Typography variant="body2" color="text.secondary">Add items from the right panel.</Typography>
                   ) : null}
 
                   {(Array.isArray(form.sections) ? form.sections : []).map((it) => (
@@ -1275,52 +1279,39 @@ const Procedures = () => {
                       ) : null}
                     </div>
                   ))}
-                </div>
-              </div>
-            </div>
+                </Stack>
+              </Paper>
+            </Grid>
 
-            <div className="lg:col-span-3">
-              <div className="rounded-md border border-gray-200 bg-white p-4">
-                <div className="text-sm font-semibold text-gray-900">New Item</div>
-                <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => addBuilderItem('field')}
-                    className="w-full inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <SquarePen className="h-4 w-4 text-gray-500" />
+            <Grid item xs={12} lg={3}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  New Item
+                </Typography>
+                <Stack spacing={1} sx={{ mt: 2 }}>
+                  <Button type="button" variant="outlined" onClick={() => addBuilderItem('field')} startIcon={<SquarePen size={18} />}>
                     Field
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addBuilderItem('heading')}
-                    className="w-full inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <Type className="h-4 w-4 text-gray-500" />
+                  </Button>
+                  <Button type="button" variant="outlined" onClick={() => addBuilderItem('heading')} startIcon={<Type size={18} />}>
                     Heading
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addBuilderItem('section')}
-                    className="w-full inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <Rows3 className="h-4 w-4 text-gray-500" />
+                  </Button>
+                  <Button type="button" variant="outlined" onClick={() => addBuilderItem('section')} startIcon={<Rows3 size={18} />}>
                     Section
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </Button>
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !String(form.name || '').trim()}>
+            <Button variant="outlined" color="inherit" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSave} disabled={saving || !String(form.name || '').trim()}>
               {saving ? 'Saving…' : 'Save'}
             </Button>
           </div>
         </div>
       </Modal>
-    </div>
+    </Stack>
   );
 };
 

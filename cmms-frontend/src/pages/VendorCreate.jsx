@@ -2,7 +2,21 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Paperclip, Plus } from 'lucide-react';
 import axios from 'axios';
-import { Button } from '../components';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import useStore from '../store/useStore';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
@@ -239,194 +253,206 @@ const VendorCreate = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{isEdit ? 'Edit Vendor' : 'New Vendor'}</h1>
-      </div>
+    <Box sx={{ maxWidth: 960, mx: 'auto', px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
+      <Stack spacing={2.5}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between">
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            {isEdit ? 'Edit Vendor' : 'New Vendor'}
+          </Typography>
+        </Stack>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            placeholder="Enter Vendor Name (Required)"
-            className="w-full border-b border-gray-300 px-1 py-3 text-sm focus:outline-none focus:border-primary-500"
-          />
-        </div>
+        {error ? <Alert severity="error">{error}</Alert> : null}
 
-        {isEdit ? (
-          <>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
+        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+          <form onSubmit={handleSubmit}>
+            <Stack spacing={2.5}>
+              <TextField
+                label="Vendor Name"
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
-                rows={4}
-                placeholder="Add a description"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+                fullWidth
               />
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Contact List</label>
-              <button
-                type="button"
-                onClick={addContact}
-                className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                New Contact
-              </button>
+              {isEdit ? (
+                <>
+                  <TextField
+                    label="Description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    multiline
+                    minRows={4}
+                    fullWidth
+                  />
 
-              {contacts.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  {contacts.map((c) => (
-                    <div key={c.id} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Name"
-                        value={c.name}
-                        onChange={(e) => updateContact(c.id, { name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        value={c.email}
-                        onChange={(e) => updateContact(c.id, { email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="Phone"
-                        value={c.phone}
-                        onChange={(e) => updateContact(c.id, { phone: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      />
-                      <div className="md:col-span-3 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => removeContact(c.id)}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" rowGap={1}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Contact List
+                      </Typography>
+                      <Button type="button" variant="outlined" onClick={addContact} startIcon={<Plus size={18} />}>
+                        New Contact
+                      </Button>
+                    </Stack>
+
+                    {contacts.length > 0 ? (
+                      <Stack spacing={1.5}>
+                        {contacts.map((c) => (
+                          <Paper key={c.id} variant="outlined" sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} md={4}>
+                                <TextField
+                                  label="Name"
+                                  value={c.name}
+                                  onChange={(e) => updateContact(c.id, { name: e.target.value })}
+                                  fullWidth
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={4}>
+                                <TextField
+                                  label="Email"
+                                  type="email"
+                                  value={c.email}
+                                  onChange={(e) => updateContact(c.id, { email: e.target.value })}
+                                  fullWidth
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={4}>
+                                <TextField
+                                  label="Phone"
+                                  value={c.phone}
+                                  onChange={(e) => updateContact(c.id, { phone: e.target.value })}
+                                  fullWidth
+                                />
+                              </Grid>
+                              <Grid item xs={12}>
+                                <Stack direction="row" justifyContent="flex-end">
+                                  <Button type="button" color="error" variant="text" onClick={() => removeContact(c.id)}>
+                                    Remove contact
+                                  </Button>
+                                </Stack>
+                              </Grid>
+                            </Grid>
+                          </Paper>
+                        ))}
+                      </Stack>
+                    ) : null}
+                  </Stack>
+
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      Files
+                    </Typography>
+                    <input
+                      ref={filesInputRef}
+                      type="file"
+                      multiple
+                      onChange={onFilesSelected}
+                      style={{ display: 'none' }}
+                    />
+                    <Button type="button" variant="outlined" onClick={openFilesPicker} startIcon={<Paperclip size={18} />}>
+                      Attach files
+                    </Button>
+
+                    {attachedFiles.length > 0 ? (
+                      <Stack spacing={1}>
+                        {attachedFiles.map((x) => (
+                          <Paper key={x.key} variant="outlined" sx={{ p: 1.5 }}>
+                            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                              <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                                  {x.file?.name || 'File'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {x.file?.type || 'file'} • {Math.round((x.file?.size || 0) / 1024)} KB
+                                </Typography>
+                              </Box>
+                              <Button type="button" color="error" variant="text" onClick={() => removeAttachedFile(x.key)}>
+                                Remove
+                              </Button>
+                            </Stack>
+                          </Paper>
+                        ))}
+                        <Typography variant="caption" color="text.secondary">
+                          Files are selected in the UI.
+                        </Typography>
+                      </Stack>
+                    ) : null}
+                  </Stack>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel id="vendor-locations-label">Locations</InputLabel>
+                        <Select
+                          labelId="vendor-locations-label"
+                          label="Locations"
+                          name="locations"
+                          value={formData.locations}
+                          onChange={handleChange}
                         >
-                          Remove contact
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                          <MenuItem value="">None</MenuItem>
+                          {locationOptions.map((l) => (
+                            <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Files</label>
-              <input
-                ref={filesInputRef}
-                type="file"
-                multiple
-                onChange={onFilesSelected}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={openFilesPicker}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-primary-500 text-primary-700 rounded-md text-sm hover:bg-primary-50"
-              >
-                <Paperclip className="w-4 h-4" />
-                Attach files
-              </button>
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel id="vendor-assets-label">Assets</InputLabel>
+                        <Select
+                          labelId="vendor-assets-label"
+                          label="Assets"
+                          name="assets"
+                          value={formData.assets}
+                          onChange={handleChange}
+                        >
+                          <MenuItem value="">{loadingOptions ? 'Loading…' : 'None'}</MenuItem>
+                          {assetOptions.map((a) => (
+                            <MenuItem key={a.id} value={a.id}>{a.asset_name || a.name || String(a.id)}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
 
-              {attachedFiles.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  {attachedFiles.map((x) => (
-                    <div key={x.key} className="flex items-center justify-between gap-3 rounded-md border border-gray-200 px-3 py-2">
-                      <div className="min-w-0">
-                        <div className="text-sm text-gray-900 truncate">{x.file?.name || 'File'}</div>
-                        <div className="text-xs text-gray-500">{x.file?.type || 'file'} • {Math.round((x.file?.size || 0) / 1024)} KB</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachedFile(x.key)}
-                        className="text-sm text-red-600 hover:text-red-700 font-medium"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  <div className="text-xs text-gray-500">Files are selected in the UI.</div>
-                </div>
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel id="vendor-parts-label">Parts</InputLabel>
+                        <Select
+                          labelId="vendor-parts-label"
+                          label="Parts"
+                          name="parts"
+                          value={formData.parts}
+                          onChange={handleChange}
+                        >
+                          <MenuItem value="">{loadingOptions ? 'Loading…' : 'None'}</MenuItem>
+                          {partOptions.map((p) => (
+                            <MenuItem key={p.id} value={p.id}>{p.name || p.part_name || String(p.id)}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </>
               ) : null}
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Locations</label>
-              <select
-                name="locations"
-                value={formData.locations}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">Start typing...</option>
-                {locationOptions.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Assets</label>
-              <select
-                name="assets"
-                value={formData.assets}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">{loadingOptions ? 'Loading…' : 'Start typing...'}</option>
-                {assetOptions.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.asset_name || a.name || String(a.id)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Parts</label>
-              <select
-                name="parts"
-                value={formData.parts}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">{loadingOptions ? 'Loading…' : 'Start typing...'}</option>
-                {partOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name || p.part_name || String(p.id)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        ) : null}
-
-        <div className="flex justify-end gap-4 pt-6">
-          <button
-            type="button"
-            onClick={() => navigate('/vendors')}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Cancel
-          </button>
-          <Button type="submit" disabled={saving || loading}>{saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save' : 'Create')}</Button>
-        </div>
-      </form>
-    </div>
+              <Stack direction="row" spacing={1.5} justifyContent="flex-end" alignItems="center">
+                <Button type="button" variant="text" onClick={() => navigate('/vendors')}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="contained" disabled={saving || loading}>
+                  {saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save' : 'Create')}
+                </Button>
+              </Stack>
+            </Stack>
+          </form>
+        </Paper>
+      </Stack>
+    </Box>
   );
 };
 

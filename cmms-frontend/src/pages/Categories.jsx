@@ -1,8 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Edit2, MoreVertical, Plus, Search, Tag, Trash2 } from 'lucide-react';
 import axios from 'axios';
-import { Button, Card, Modal } from '../components';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import useStore from '../store/useStore';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
@@ -104,150 +122,188 @@ const Categories = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Categories"
-              className="w-80 pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+    <Stack spacing={2.5}>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+          Categories
+        </Typography>
 
-      {error ? (
-        <div className="p-4 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-          <div>{error}</div>
-          <button
-            type="button"
-            onClick={() => setError('')}
-            className="text-sm font-medium text-red-700 hover:text-red-800"
-          >
-            Dismiss
-          </button>
-        </div>
-      ) : null}
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Categories"
+            size="small"
+            sx={{ width: { xs: '100%', sm: 360 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Button variant="contained" onClick={openCreate} startIcon={<Plus size={18} />}>
             New Category
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="lg:col-span-4">
-          <div className="divide-y divide-gray-200">
-            {filtered.map((c, idx) => {
-              const active = c.id === (selected?.id || '');
-              const cls = iconClasses[idx % iconClasses.length];
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedId(c.id)}
-                  className={`w-full text-left px-4 py-4 ${active ? 'bg-gray-900/40' : 'bg-transparent'} hover:bg-gray-900/30`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`h-9 w-9 rounded-full border flex items-center justify-center ${cls}`}>
-                      <Tag className="h-4 w-4" />
-                    </div>
-                    <div className={`font-medium truncate ${active ? 'text-white' : 'text-gray-200'}`}>{c.name}</div>
-                  </div>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm text-gray-500">No categories found</div>
+      {error ? (
+        <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.light' }}>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Typography variant="body2" color="error.main">{error}</Typography>
+            <Button color="error" onClick={() => setError('')} size="small">Dismiss</Button>
+          </Stack>
+        </Paper>
+      ) : null}
+
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            <List disablePadding>
+              {filtered.map((c, idx) => {
+                const active = c.id === (selected?.id || '');
+                const cls = iconClasses[idx % iconClasses.length];
+
+                return (
+                  <React.Fragment key={c.id}>
+                    <ListItemButton selected={active} onClick={() => setSelectedId(c.id)}>
+                      <ListItemIcon>
+                        <Box
+                          className={`h-9 w-9 rounded-full border flex items-center justify-center ${cls}`}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '999px',
+                            width: 36,
+                            height: 36,
+                          }}
+                        >
+                          <Tag size={16} />
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText primary={c.name} primaryTypographyProps={{ fontWeight: 700 }} />
+                    </ListItemButton>
+                    <Divider component="li" />
+                  </React.Fragment>
+                );
+              })}
+
+              {filtered.length === 0 ? (
+                <Box sx={{ p: 3 }}>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    No categories found
+                  </Typography>
+                </Box>
+              ) : null}
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} lg={8}>
+          <Paper variant="outlined" sx={{ minHeight: 220 }}>
+            {selected ? (
+              <>
+                <Box sx={{ px: 2, py: 1.5 }}>
+                  <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                      {selected.name}
+                    </Typography>
+
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Button variant="outlined" onClick={openEdit} startIcon={<Edit2 size={16} />}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        startIcon={<Trash2 size={16} />}
+                      >
+                        {deleting ? 'Deleting…' : 'Delete'}
+                      </Button>
+                      <IconButton aria-label="more" size="small">
+                        <MoreVertical size={18} />
+                      </IconButton>
+                    </Stack>
+                  </Stack>
+                </Box>
+                <Divider />
+
+                <Box sx={{ px: 2, py: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Created by{' '}
+                    <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                      {selected.createdBy || 'System'}
+                    </Box>{' '}
+                    on{' '}
+                    <Box component="span" sx={{ color: 'text.primary' }}>
+                      {formatDateTime(selected.createdAt)}
+                    </Box>
+                  </Typography>
+                </Box>
+
+                <Box sx={{ px: 2, pb: 3 }}>
+                  <Button variant="outlined">Use in New Work Order</Button>
+                </Box>
+              </>
+            ) : (
+              <Box sx={{ p: 4 }}>
+                <Typography variant="body2" color="text.secondary" align="center">
+                  Select a category
+                </Typography>
+              </Box>
             )}
-          </div>
-        </Card>
+          </Paper>
+        </Grid>
+      </Grid>
 
-        <Card className="lg:col-span-8">
-          {selected ? (
-            <>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                <div className="text-lg font-semibold text-gray-900">{selected.name}</div>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={openEdit}>
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="secondary" onClick={handleDelete} disabled={deleting}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {deleting ? 'Deleting…' : 'Delete'}
-                  </Button>
-                  <button
-                    type="button"
-                    className="h-9 w-9 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50"
-                    title="More"
-                  >
-                    <MoreVertical className="h-4 w-4 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-5 py-4">
-                <div className="text-sm text-gray-600">
-                  Created by <span className="font-medium text-gray-900">{selected.createdBy || 'System'}</span> on{' '}
-                  <span className="text-gray-700">{formatDateTime(selected.createdAt)}</span>
-                </div>
-              </div>
-
-              <div className="px-5 py-10">
-                <div className="flex items-center justify-center">
-                  <Button variant="secondary">Use in New Work Order</Button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="px-6 py-16 text-center text-sm text-gray-500">Select a category</div>
-          )}
-        </Card>
-      </div>
-
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Category" size="md">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
+      <Dialog open={showCreate} onClose={() => setShowCreate(false)} fullWidth maxWidth="xs">
+        <DialogTitle>New Category</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              label="Name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter category name"
+              fullWidth
+              autoFocus
             />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()}>Create</Button>
-          </div>
-        </div>
-      </Modal>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCreate(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleCreate} disabled={!newName.trim()}>
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit Category" size="md">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
+      <Dialog open={showEdit} onClose={() => setShowEdit(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit Category</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              label="Name"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter category name"
+              fullWidth
+              autoFocus
             />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowEdit(false)}>Cancel</Button>
-            <Button onClick={handleEdit} disabled={!editName.trim()}>Save</Button>
-          </div>
-        </div>
-      </Modal>
-
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-gray-500">
-        Categories UI is mock/local (no backend persistence yet).
-      </motion.div>
-    </div>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowEdit(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleEdit} disabled={!editName.trim()}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 };
 

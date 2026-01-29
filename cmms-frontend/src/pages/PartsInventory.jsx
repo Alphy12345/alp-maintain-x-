@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   Filter,
@@ -9,12 +8,33 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import axios from 'axios';
-import { Button, Card, Modal } from '../components';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
-
-const chipBase =
-  'inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50';
 
 const PartsInventory = () => {
   const [search, setSearch] = useState('');
@@ -220,370 +240,415 @@ const PartsInventory = () => {
 
   const isEmpty = filtered.length === 0;
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Parts</h1>
-          <div className="text-sm text-gray-600">00</div>
-        </div>
+  const assetMenuAnchorRef = useRef(null);
+  const vendorMenuAnchorRef = useRef(null);
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Parts"
-              className="w-64 pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />
+  return (
+    <Stack spacing={2.5}>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+        <Stack direction="row" spacing={1} alignItems="baseline">
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            Parts
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {String(filtered.length)}
+          </Typography>
+        </Stack>
+
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Parts"
+            size="small"
+            sx={{ width: { xs: '100%', sm: 280 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button variant="contained" onClick={openCreate} startIcon={<Plus size={18} />}>
             New Part
-            <ChevronDown className="w-4 h-4 ml-2" />
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {error ? (
-        <div className="p-4 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-          <div>{error}</div>
-          <button
-            type="button"
-            onClick={() => fetchParts()}
-            className="text-sm font-medium text-red-700 hover:text-red-800"
-          >
-            Retry
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          action={(
+            <Button color="inherit" size="small" onClick={() => fetchParts()}>
+              Retry
+            </Button>
+          )}
+        >
+          {error}
+        </Alert>
       ) : null}
 
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setFilters((p) => ({ ...p, needsRestock: !p.needsRestock }))}
-                className={`${chipBase} ${filters.needsRestock ? 'border-primary-300 text-primary-700' : ''}`}
-              >
-              <Filter className="h-4 w-4 text-gray-400" />
-              Needs Restock
-              </button>
-            </div>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Chip
+              icon={<Filter size={16} />}
+              label="Needs Restock"
+              variant={filters.needsRestock ? 'filled' : 'outlined'}
+              color={filters.needsRestock ? 'primary' : 'default'}
+              onClick={() => setFilters((p) => ({ ...p, needsRestock: !p.needsRestock }))}
+            />
 
-            <div className="relative">
-              <button
-                type="button"
+            <Box>
+              <Chip
+                ref={assetMenuAnchorRef}
+                clickable
+                label={filters.assetId ? 'Asset: Filtered' : 'Asset'}
+                variant={filters.assetId ? 'filled' : 'outlined'}
+                color={filters.assetId ? 'primary' : 'default'}
                 onClick={() => setOpenFilter(openFilter === 'asset' ? '' : 'asset')}
-                className={`${chipBase} ${filters.assetId ? 'border-primary-300 text-primary-700' : ''}`}
+                onDelete={() => setOpenFilter(openFilter === 'asset' ? '' : 'asset')}
+                deleteIcon={<ChevronDown size={16} />}
+              />
+              <Menu
+                anchorEl={assetMenuAnchorRef.current}
+                open={openFilter === 'asset'}
+                onClose={() => setOpenFilter('')}
+                PaperProps={{ sx: { maxHeight: 320, width: 320 } }}
               >
-                Asset
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </button>
-              {openFilter === 'asset' ? (
-                <div className="absolute z-50 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setFilters((p) => ({ ...p, assetId: '' })); setOpenFilter(''); }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Any
-                    </button>
-                    {loadingFilterOptions && assets.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-gray-500">Loading…</div>
-                    ) : null}
-                    {!loadingFilterOptions && assets.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-gray-500">No assets</div>
-                    ) : null}
-                    {assets.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => { setFilters((p) => ({ ...p, assetId: String(a.id) })); setOpenFilter(''); }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      >
-                        {a.asset_name || a.name || String(a.id)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+                <MenuItem
+                  onClick={() => {
+                    setFilters((p) => ({ ...p, assetId: '' }));
+                    setOpenFilter('');
+                  }}
+                >
+                  Any
+                </MenuItem>
+                {loadingFilterOptions && assets.length === 0 ? (
+                  <MenuItem disabled>Loading…</MenuItem>
+                ) : null}
+                {!loadingFilterOptions && assets.length === 0 ? (
+                  <MenuItem disabled>No assets</MenuItem>
+                ) : null}
+                {assets.map((a) => (
+                  <MenuItem
+                    key={a.id}
+                    onClick={() => {
+                      setFilters((p) => ({ ...p, assetId: String(a.id) }));
+                      setOpenFilter('');
+                    }}
+                  >
+                    {a.asset_name || a.name || String(a.id)}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Box>
 
-            <div className="relative">
-              <button
-                type="button"
+            <Box>
+              <Chip
+                ref={vendorMenuAnchorRef}
+                clickable
+                label={filters.vendorId ? 'Vendor: Filtered' : 'Vendor'}
+                variant={filters.vendorId ? 'filled' : 'outlined'}
+                color={filters.vendorId ? 'primary' : 'default'}
                 onClick={() => setOpenFilter(openFilter === 'vendor' ? '' : 'vendor')}
-                className={`${chipBase} ${filters.vendorId ? 'border-primary-300 text-primary-700' : ''}`}
+                onDelete={() => setOpenFilter(openFilter === 'vendor' ? '' : 'vendor')}
+                deleteIcon={<ChevronDown size={16} />}
+              />
+              <Menu
+                anchorEl={vendorMenuAnchorRef.current}
+                open={openFilter === 'vendor'}
+                onClose={() => setOpenFilter('')}
+                PaperProps={{ sx: { maxHeight: 320, width: 320 } }}
               >
-                Vendor
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </button>
-              {openFilter === 'vendor' ? (
-                <div className="absolute z-50 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setFilters((p) => ({ ...p, vendorId: '' })); setOpenFilter(''); }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Any
-                    </button>
-                    {vendors.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => { setFilters((p) => ({ ...p, vendorId: String(v.id) })); setOpenFilter(''); }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      >
-                        {v.name || String(v.id)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+                <MenuItem
+                  onClick={() => {
+                    setFilters((p) => ({ ...p, vendorId: '' }));
+                    setOpenFilter('');
+                  }}
+                >
+                  Any
+                </MenuItem>
+                {vendors.map((v) => (
+                  <MenuItem
+                    key={v.id}
+                    onClick={() => {
+                      setFilters((p) => ({ ...p, vendorId: String(v.id) }));
+                      setOpenFilter('');
+                    }}
+                  >
+                    {v.name || String(v.id)}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Box>
 
             {anyFilterActive ? (
-              <button
-                type="button"
-                onClick={() => { setFilters({ needsRestock: false, assetId: '', vendorId: '' }); setOpenFilter(''); }}
-                className={chipBase}
+              <Button
+                size="small"
+                onClick={() => {
+                  setFilters({ needsRestock: false, assetId: '', vendorId: '' });
+                  setOpenFilter('');
+                }}
               >
                 Clear Filters
-              </button>
+              </Button>
             ) : null}
-          </div>
+          </Stack>
 
-          <button type="button" className={chipBase}>
-            <Settings2 className="h-4 w-4 text-gray-400" />
+          <Button size="small" startIcon={<Settings2 size={16} />} disabled>
             My Filters
-          </button>
-        </div>
-      </Card>
+          </Button>
+        </Stack>
+      </Paper>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="lg:col-span-4">
-          <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">Sort by: <span className="text-gray-900">Name</span> · <span className="text-gray-900">Ascending Order</span></div>
-            <SlidersHorizontal className="h-4 w-4 text-gray-400" />
-          </div>
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body2" color="text.secondary">
+                Sort by: <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>Name</Box> ·{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>Ascending</Box>
+              </Typography>
+              <IconButton size="small" aria-label="sort">
+                <SlidersHorizontal size={18} />
+              </IconButton>
+            </Box>
+            <Divider />
 
-          <div className="px-6 py-16">
-            {isEmpty ? (
-              <div className="flex flex-col items-center text-center gap-4">
-                <div className="h-20 w-20 rounded-full bg-primary-50 flex items-center justify-center">
-                  <div className="h-10 w-10 rounded-xl bg-primary-600" />
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-gray-900">Start adding Parts</div>
-                  <div className="text-sm text-gray-600">Click the New Part button in the top right to get started</div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {loading ? (
-                  <div className="text-sm text-gray-600">Loading parts…</div>
-                ) : (
-                  filtered.map((p) => {
-                    const active = selectedPart?.id === p.id;
-                    const vendorName = vendorById.get(p.vendor_id)?.name || '—';
-                    const needsRestock = Number(p.units_in_stock) <= Number(p.minimum_in_stock);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setSelectedPart(p)}
-                        className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
-                          active ? 'border-primary-400 bg-transparent' : 'border-gray-200 bg-transparent hover:bg-gray-50/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
-                          {needsRestock ? (
-                            <span className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-0.5">Restock</span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500 truncate">
-                          {vendorName} · {p.part_type || '—'}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-        </Card>
+            <Box sx={{ p: 2 }}>
+              {isEmpty ? (
+                <Stack spacing={2} alignItems="center" sx={{ py: 6 }}>
+                  <Box sx={{ width: 80, height: 80, borderRadius: '999px', bgcolor: 'primary.50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.main' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" align="center" sx={{ fontWeight: 800 }}>
+                      Start adding Parts
+                    </Typography>
+                    <Typography variant="body2" align="center" color="text.secondary">
+                      Click the New Part button to get started
+                    </Typography>
+                  </Box>
+                </Stack>
+              ) : (
+                <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {loading ? (
+                    <Typography variant="body2" color="text.secondary">Loading parts…</Typography>
+                  ) : (
+                    filtered.map((p) => {
+                      const active = selectedPart?.id === p.id;
+                      const vendorName = vendorById.get(p.vendor_id)?.name || '—';
+                      const needsRestock = Number(p.units_in_stock) <= Number(p.minimum_in_stock);
 
-        <Card className="lg:col-span-8">
-          <div className="px-6 py-16">
-            {!selectedPart ? (
-              <div className="text-sm text-gray-500">Select a part to view details</div>
-            ) : (
-              <div className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-lg font-semibold text-gray-900">{selectedPart.name}</div>
-                    <div className="mt-1 text-sm text-gray-600">
-                      Vendor: {vendorById.get(selectedPart.vendor_id)?.name || '—'}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openEdit(selectedPart)}>
-                      Edit
-                    </Button>
-                    <Button variant="secondary" onClick={() => handleDelete(selectedPart.id)}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
+                      return (
+                        <ListItemButton
+                          key={p.id}
+                          selected={active}
+                          onClick={() => setSelectedPart(p)}
+                          sx={{
+                            borderRadius: 2,
+                            border: 1,
+                            borderColor: active ? 'primary.main' : 'divider',
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                                <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
+                                  {p.name}
+                                </Typography>
+                                {needsRestock ? (
+                                  <Chip size="small" color="error" label="Restock" />
+                                ) : null}
+                              </Stack>
+                            }
+                            secondary={
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                {vendorName} · {p.part_type || '—'}
+                              </Typography>
+                            }
+                          />
+                        </ListItemButton>
+                      );
+                    })
+                  )}
+                </List>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-500">Units in stock</div>
-                    <div className="text-sm text-gray-900">{selectedPart.units_in_stock}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Minimum in stock</div>
-                    <div className="text-sm text-gray-900">{selectedPart.minimum_in_stock}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Unit cost</div>
-                    <div className="text-sm text-gray-900">{selectedPart.unit_cost}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Part type</div>
-                    <div className="text-sm text-gray-900">{selectedPart.part_type || '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Location</div>
-                    <div className="text-sm text-gray-900">{selectedPart.location || '—'}</div>
-                  </div>
-                </div>
+        <Grid item xs={12} lg={8}>
+          <Paper variant="outlined" sx={{ minHeight: 260 }}>
+            <Box sx={{ p: 2 }}>
+              {!selectedPart ? (
+                <Typography variant="body2" color="text.secondary">
+                  Select a part to view details
+                </Typography>
+              ) : (
+                <Stack spacing={2.5}>
+                  <Stack direction="row" spacing={2} alignItems="flex-start" justifyContent="space-between" flexWrap="wrap">
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                        {selectedPart.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Vendor: {vendorById.get(selectedPart.vendor_id)?.name || '—'}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button variant="outlined" onClick={() => openEdit(selectedPart)}>
+                        Edit
+                      </Button>
+                      <Button variant="outlined" color="error" onClick={() => handleDelete(selectedPart.id)}>
+                        Delete
+                      </Button>
+                    </Stack>
+                  </Stack>
 
-                <div>
-                  <div className="text-xs text-gray-500">Description</div>
-                  <div className="text-sm text-gray-900">{selectedPart.description || '—'}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary">Units in stock</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.units_in_stock}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary">Minimum in stock</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.minimum_in_stock}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary">Unit cost</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.unit_cost}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary">Part type</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.part_type || '—'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="caption" color="text.secondary">Location</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.location || '—'}</Typography>
+                    </Grid>
+                  </Grid>
 
-      <Modal
-        isOpen={showModal}
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Description</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPart.description || '—'}</Typography>
+                  </Box>
+                </Stack>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Dialog
+        open={showModal}
         onClose={() => setShowModal(false)}
-        title={mode === 'create' ? 'New Part' : 'Edit Part'}
-        size="lg"
+        fullWidth
+        maxWidth="md"
       >
-        <div className="space-y-4">
-          {error ? (
-            <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm">
-              {error}
-            </div>
-          ) : null}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
+        <DialogTitle>{mode === 'create' ? 'New Part' : 'Edit Part'}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Name"
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Part name"
+              fullWidth
+              autoFocus
             />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Units in stock</label>
-              <input
-                type="number"
-                value={form.units_in_stock}
-                onChange={(e) => setForm((p) => ({ ...p, units_in_stock: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Minimum in stock</label>
-              <input
-                type="number"
-                value={form.minimum_in_stock}
-                onChange={(e) => setForm((p) => ({ ...p, minimum_in_stock: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit cost</label>
-              <input
-                type="number"
-                value={form.unit_cost}
-                onChange={(e) => setForm((p) => ({ ...p, unit_cost: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-              <div className="relative">
-                <select
-                  value={form.vendor_id}
-                  onChange={(e) => setForm((p) => ({ ...p, vendor_id: e.target.value }))}
-                  className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">Select Vendor</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-          </div>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Units in stock"
+                  type="number"
+                  value={form.units_in_stock}
+                  onChange={(e) => setForm((p) => ({ ...p, units_in_stock: e.target.value }))}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Minimum in stock"
+                  type="number"
+                  value={form.minimum_in_stock}
+                  onChange={(e) => setForm((p) => ({ ...p, minimum_in_stock: e.target.value }))}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Unit cost"
+                  type="number"
+                  value={form.unit_cost}
+                  onChange={(e) => setForm((p) => ({ ...p, unit_cost: e.target.value }))}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <Select
+                    displayEmpty
+                    value={form.vendor_id}
+                    onChange={(e) => setForm((p) => ({ ...p, vendor_id: e.target.value }))}
+                    renderValue={(val) => {
+                      if (!val) return 'Select Vendor';
+                      const found = vendors.find((v) => String(v.id) === String(val));
+                      return found?.name || String(val);
+                    }}
+                  >
+                    <MenuItem value="">Select Vendor</MenuItem>
+                    {vendors.map((v) => (
+                      <MenuItem key={v.id} value={String(v.id)}>{v.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Part type</label>
-              <input
-                value={form.part_type}
-                onChange={(e) => setForm((p) => ({ ...p, part_type: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-              <input
-                value={form.location}
-                onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-          </div>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Part type"
+                  value={form.part_type}
+                  onChange={(e) => setForm((p) => ({ ...p, part_type: e.target.value }))}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Location"
+                  value={form.location}
+                  onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
+            <TextField
+              label="Description"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              fullWidth
+              multiline
+              minRows={3}
             />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={saving || !String(form.name || '').trim()}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowModal(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={saving || !String(form.name || '').trim()}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 };
 

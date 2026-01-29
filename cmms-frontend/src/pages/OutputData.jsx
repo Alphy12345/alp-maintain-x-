@@ -1,6 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import { Button } from '../components';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
@@ -73,88 +87,122 @@ export default function OutputData() {
   }, []);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xl font-semibold">Output Data</div>
-          <div className="text-sm text-gray-500">Procedure outputs submitted from the mobile app</div>
-        </div>
-        <Button onClick={load} disabled={loading}>
+    <Stack spacing={2.5}>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            Output Data
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Procedure outputs submitted from the mobile app
+          </Typography>
+        </Box>
+
+        <Button variant="contained" onClick={load} disabled={loading}>
           {loading ? 'Reloading…' : 'Reload'}
         </Button>
-      </div>
+      </Stack>
 
       {error ? (
-        <div className="p-4 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm flex items-center justify-between">
-          <div>{error}</div>
-          <button type="button" onClick={load} className="text-sm font-medium text-red-700 hover:text-red-800">
-            Retry
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          action={(
+            <Button color="inherit" size="small" onClick={load}>
+              Retry
+            </Button>
+          )}
+        >
+          {error}
+        </Alert>
       ) : null}
 
-      <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Order</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedure</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performed By</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fields</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+      <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Work Order</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Procedure</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Performed By</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Fields</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {loading ? (
-                <tr>
-                  <td className="px-4 py-8 text-sm text-gray-500" colSpan={5}>
-                    Loading…
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ py: 6 }}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+                      <CircularProgress size={20} />
+                      <Typography variant="body2" color="text.secondary">Loading…</Typography>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
               ) : data.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-8 text-sm text-gray-500" colSpan={5}>
-                    No output data found.
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ py: 6 }}>
+                    <Typography variant="body2" color="text.secondary" align="center">
+                      No output data found.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
               ) : (
                 data.map((row) => (
-                  <tr key={String(row?.execution_id)} className="align-top">
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="font-medium">{row?.work_order_name || '—'}</div>
-                      <div className="text-xs text-gray-500">#{row?.work_order_id ?? '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="font-medium">{row?.procedure_name || '—'}</div>
-                      <div className="text-xs text-gray-500">#{row?.procedure_id ?? '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{row?.performed_by_name || row?.performed_by || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{row?.status || ''}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
+                  <TableRow key={String(row?.execution_id)} hover>
+                    <TableCell sx={{ verticalAlign: 'top' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        {row?.work_order_name || '—'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        #{row?.work_order_id ?? '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ verticalAlign: 'top' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        {row?.procedure_name || '—'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        #{row?.procedure_id ?? '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ verticalAlign: 'top' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {row?.performed_by_name || row?.performed_by || '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ verticalAlign: 'top' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {row?.status || ''}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ verticalAlign: 'top' }}>
                       {(row?.fields || []).length === 0 ? (
-                        <div className="text-gray-500">—</div>
+                        <Typography variant="body2" color="text.secondary">—</Typography>
                       ) : (
-                        <div className="space-y-1">
+                        <Stack spacing={0.5}>
                           {(row.fields || []).slice(0, 6).map((f) => (
-                            <div key={String(f?.field_id)} className="text-xs">
-                              <span className="font-medium text-gray-900">{f?.label || f?.field_id}:</span>{' '}
-                              <span className="text-gray-700">{String(f?.value ?? '')}</span>
-                            </div>
+                            <Typography key={String(f?.field_id)} variant="caption" color="text.secondary">
+                              <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                {f?.label || f?.field_id}:
+                              </Box>{' '}
+                              {String(f?.value ?? '')}
+                            </Typography>
                           ))}
                           {(row.fields || []).length > 6 ? (
-                            <div className="text-xs text-gray-500">+{(row.fields || []).length - 6} more</div>
+                            <Typography variant="caption" color="text.secondary">
+                              +{(row.fields || []).length - 6} more
+                            </Typography>
                           ) : null}
-                        </div>
+                        </Stack>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Stack>
   );
 }

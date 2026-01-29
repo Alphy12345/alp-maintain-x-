@@ -14,7 +14,28 @@ import {
   Tooltip,
 } from 'recharts';
 import { Calendar, ChevronDown, Download, Filter } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Table, Badge } from '../components';
+import {
+  Box,
+  Button,
+  Chip,
+  Checkbox,
+  Collapse,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  Select,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { Card, CardBody, CardHeader, Table, Badge } from '../components';
 import useStore from '../store/useStore';
 import axios from 'axios';
 import jsPDF from 'jspdf';
@@ -39,7 +60,6 @@ const normalizeWorkOrderStatus = (raw) => {
 
 const tabs = [
   { id: 'work_orders', label: 'Work Orders' },
-  { id: 'reporting_details', label: 'Reporting Details' },
   { id: 'export_data', label: 'Export Data' },
 ];
 
@@ -68,7 +88,6 @@ const Reporting = () => {
   const [workOrdersError, setWorkOrdersError] = useState('');
 
   const [activeTab, setActiveTab] = useState('work_orders');
-  const [reportingGroupBy, setReportingGroupBy] = useState('user');
   const [exportSection, setExportSection] = useState('work_orders');
   const [exportForm, setExportForm] = useState({
     start: '',
@@ -98,6 +117,12 @@ const Reporting = () => {
     }
   }, [exportSection]);
 
+  useEffect(() => {
+    if (activeTab === 'reporting_details') {
+      setActiveTab('work_orders');
+    }
+  }, [activeTab]);
+
   const startDate = useMemo(() => new Date(`${dateRange.start}T00:00:00`), [dateRange.start]);
   const endDate = useMemo(() => new Date(`${dateRange.end}T23:59:59`), [dateRange.end]);
 
@@ -111,7 +136,8 @@ const Reporting = () => {
         const mapped = rows.map((wo) => {
           const dueIso = wo?.due_date ? new Date(wo.due_date).toISOString() : null;
           const startIso = wo?.start_date ? new Date(wo.start_date).toISOString() : null;
-          const createdIso = startIso || dueIso || null;
+          const createdIso = wo?.created_at ? new Date(wo.created_at).toISOString() : (startIso || dueIso || null);
+          const completedIso = wo?.completed_at ? new Date(wo.completed_at).toISOString() : null;
           return {
             id: String(wo?.id ?? ''),
             title: String(wo?.name ?? ''),
@@ -119,6 +145,7 @@ const Reporting = () => {
             createdAt: createdIso,
             startDate: startIso,
             dueDate: dueIso,
+            completedAt: completedIso,
             status: normalizeWorkOrderStatus(wo?.status),
             priority: String(wo?.priority ?? 'low'),
             workType: String(wo?.work_type ?? ''),
@@ -128,7 +155,7 @@ const Reporting = () => {
             vendorId: wo?.vendor_id !== undefined && wo?.vendor_id !== null ? String(wo.vendor_id) : '',
             procedureId: wo?.procedure_id !== undefined && wo?.procedure_id !== null ? String(wo.procedure_id) : '',
             recurrence: String(wo?.recurrence ?? 'does_not_repeat'),
-            assigneeId: wo?.assignee_id !== undefined && wo?.assignee_id !== null ? String(wo.assignee_id) : '',
+            assigneeId: wo?.assigned_user_id !== undefined && wo?.assigned_user_id !== null ? String(wo.assigned_user_id) : '',
           };
         });
         setApiWorkOrders(mapped);
@@ -430,57 +457,6 @@ const Reporting = () => {
     });
   }, [filteredWorkOrders, startDate, endDate]);
 
-  const reportingDetailsRows = useMemo(() => {
-    const getKey = (wo) => {
-      if (reportingGroupBy === 'user') return wo.assigneeId || '';
-      if (reportingGroupBy === 'asset') return wo.assetId || '';
-      if (reportingGroupBy === 'location') return wo.locationId || '';
-      if (reportingGroupBy === 'category') return wo.categoryId || '';
-      if (reportingGroupBy === 'vendor') return wo.vendorId || '';
-      if (reportingGroupBy === 'asset_type') {
-        const a = assets.find((x) => x.id === wo.assetId);
-        return a?.assetType || '';
-      }
-      if (reportingGroupBy === 'team') return wo.teamId || '';
-      return '';
-    };
-
-    const getLabel = (key) => {
-      if (!key) return '-';
-      if (reportingGroupBy === 'user') return users.find((u) => u.id === key)?.name || '-';
-      if (reportingGroupBy === 'asset') return assets.find((a) => a.id === key)?.name || '-';
-      if (reportingGroupBy === 'location') return locations.find((l) => l.id === key)?.name || '-';
-      if (reportingGroupBy === 'category') return key;
-      if (reportingGroupBy === 'vendor') return key;
-      if (reportingGroupBy === 'asset_type') return key;
-      if (reportingGroupBy === 'team') return key;
-      return key;
-    };
-
-    const buckets = new Map();
-    for (const wo of (filteredWorkOrders || [])) {
-      const key = getKey(wo);
-      const b = buckets.get(key) || { key, created: 0, completed: 0 };
-      b.created += 1;
-      if (wo.status === 'completed') b.completed += 1;
-      buckets.set(key, b);
-    }
-
-    const rows = [...buckets.values()].map((b) => {
-      const ratio = b.created === 0 ? 0 : Math.round((b.completed / b.created) * 100);
-      return {
-        key: b.key,
-        label: getLabel(b.key),
-        created: b.created,
-        completed: b.completed,
-        ratio,
-      };
-    });
-
-    rows.sort((a, b) => (b.created - a.created) || (b.completed - a.completed));
-    return rows;
-  }, [filteredWorkOrders, reportingGroupBy, users, assets, locations]);
-
   const donutData = useMemo(() => ([
     { name: 'Open', value: derived.statusCounts.open, color: '#3b82f6' },
     { name: 'On Hold', value: derived.statusCounts.on_hold, color: '#f59e0b' },
@@ -509,196 +485,98 @@ const Reporting = () => {
   const clearFilters = () => setFilters({ assignedTo: '', dueDate: '', priority: '' });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Reporting</h1>
-        </div>
+    <Stack spacing={2.5}>
+      <Stack spacing={1.5}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            Reporting
+          </Typography>
+        </Stack>
 
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex flex-wrap gap-6">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === t.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+        <Tabs
+          value={activeTab}
+          onChange={(_e, v) => setActiveTab(v)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          {tabs.map((t) => (
+            <Tab key={t.id} value={t.id} label={t.label} />
+          ))}
+        </Tabs>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700">
-            <Filter className="h-4 w-4 text-gray-400" />
-            Filters
-          </div>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Chip icon={<Filter size={16} />} label="Filters" variant="outlined" size="small" />
 
-          <div className="relative">
-            <select value={filters.assignedTo} onChange={(e) => setFilters((p) => ({ ...p, assignedTo: e.target.value }))} className="appearance-none rounded-md border border-gray-200 bg-white px-3 py-1.5 pr-8 text-sm text-gray-700">
-              <option value="">Assigned To</option>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <Select
+              displayEmpty
+              value={filters.assignedTo}
+              onChange={(e) => setFilters((p) => ({ ...p, assignedTo: e.target.value }))}
+            >
+              <MenuItem value="">Assigned To</MenuItem>
               {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
+                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
               ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+            </Select>
+          </FormControl>
 
-          <input type="date" value={filters.dueDate} onChange={(e) => setFilters((p) => ({ ...p, dueDate: e.target.value }))} className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700" />
+          <TextField
+            size="small"
+            type="date"
+            value={filters.dueDate}
+            onChange={(e) => setFilters((p) => ({ ...p, dueDate: e.target.value }))}
+            sx={{ minWidth: 170 }}
+          />
 
-          <div className="relative">
-            <select value={filters.priority} onChange={(e) => setFilters((p) => ({ ...p, priority: e.target.value }))} className="appearance-none rounded-md border border-gray-200 bg-white px-3 py-1.5 pr-8 text-sm text-gray-700">
-              <option value="">Priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+          <FormControl size="small" sx={{ minWidth: 170 }}>
+            <Select
+              displayEmpty
+              value={filters.priority}
+              onChange={(e) => setFilters((p) => ({ ...p, priority: e.target.value }))}
+            >
+              <MenuItem value="">Priority</MenuItem>
+              <MenuItem value="low">Low</MenuItem>
+              <MenuItem value="medium">Medium</MenuItem>
+              <MenuItem value="high">High</MenuItem>
+              <MenuItem value="critical">Critical</MenuItem>
+            </Select>
+          </FormControl>
 
-          <button type="button" className="ml-auto inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+          <Box sx={{ flex: 1 }} />
+
+          <Button type="button" variant="outlined" color="inherit">
             My Filters
-          </button>
-
-          <button type="button" onClick={clearFilters} className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+          </Button>
+          <Button type="button" variant="outlined" color="inherit" onClick={clearFilters}>
             Clear
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
 
       {activeTab !== 'work_orders' ? (
-        activeTab === 'reporting_details' ? (
-          <div className="space-y-4">
-            <div className="text-2xl font-bold text-gray-900">Reporting Details</div>
+        activeTab === 'export_data' ? (
+          <Stack spacing={2}>
+            <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+              Export Data
+            </Typography>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">Created vs. Completed</div>
-                  <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-                </div>
-              </CardHeader>
-              <CardBody>
-                {filteredWorkOrders.length === 0 ? (
-                  <div className="text-center py-10 text-sm text-gray-500">No data available. Try changing the date range or filters.</div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                    <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-gray-900">{derived.createdCount || '-'}</div>
-                        <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Created</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-gray-900">{derived.completedCount || '-'}</div>
-                        <div className="mt-1 inline-flex items-center justify-center rounded-md border border-green-200 px-2 py-1 text-xs text-green-700">Completed</div>
-                      </div>
-                    </div>
-                    <div className="lg:col-span-9 h-56">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                          <YAxis tick={{ fontSize: 10 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="created" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                          <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-900">Created vs. Completed</div>
-                    <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <div className="text-xs text-gray-500">Grouped by:</div>
-                    {[
-                      { key: 'team', label: 'Team' },
-                      { key: 'user', label: 'User' },
-                      { key: 'asset', label: 'Asset' },
-                      { key: 'location', label: 'Location' },
-                      { key: 'category', label: 'Category' },
-                      { key: 'asset_type', label: 'Asset Type' },
-                      { key: 'vendor', label: 'Vendor' },
-                    ].map((g) => (
-                      <button
-                        key={g.key}
-                        type="button"
-                        onClick={() => setReportingGroupBy(g.key)}
-                        className={`px-3 py-1.5 rounded-md border ${reportingGroupBy === g.key ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardBody>
-                {reportingDetailsRows.length === 0 ? (
-                  <div className="text-center py-10 text-sm text-gray-500">No data available. Try changing the date range or reporting period.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                          <th className="py-2 pr-4">{reportingGroupBy === 'user' ? 'User' : reportingGroupBy === 'asset' ? 'Asset' : reportingGroupBy === 'location' ? 'Location' : reportingGroupBy === 'category' ? 'Category' : reportingGroupBy === 'asset_type' ? 'Asset Type' : reportingGroupBy === 'vendor' ? 'Vendor' : 'Team'}</th>
-                          <th className="py-2 pr-4">Created</th>
-                          <th className="py-2 pr-4">Completed</th>
-                          <th className="py-2 pr-4">Completed Ratio</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportingDetailsRows.map((r) => (
-                          <tr key={r.key || r.label} className="border-b border-gray-50">
-                            <td className="py-2 pr-4 text-gray-900">{r.label}</td>
-                            <td className="py-2 pr-4 text-gray-700">{r.created}</td>
-                            <td className="py-2 pr-4 text-gray-700">{r.completed}</td>
-                            <td className="py-2 pr-4 text-gray-700">{r.ratio}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          </div>
-        ) : activeTab === 'export_data' ? (
-          <div className="space-y-4">
-            <div className="text-2xl font-bold text-gray-900">Export Data</div>
-
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex flex-wrap gap-6">
-                {[
-                  { id: 'work_orders', label: 'Work Orders' },
-                  { id: 'assets', label: 'Assets' },
-                  { id: 'asset_status', label: 'Asset Status' },
-                  { id: 'parts', label: 'Parts' },
-                  { id: 'part_transactions', label: 'Part Transactions' },
-                  { id: 'vendors', label: 'Vendors' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setExportSection(t.id)}
-                    className={`py-2 px-1 border-b-2 text-sm font-medium ${exportSection === t.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
+            <Tabs
+              value={exportSection}
+              onChange={(_e, v) => setExportSection(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              {[
+                { id: 'work_orders', label: 'Work Orders' },
+                { id: 'assets', label: 'Assets' },
+                { id: 'asset_status', label: 'Asset Status' },
+                { id: 'parts', label: 'Parts' },
+                { id: 'part_transactions', label: 'Part Transactions' },
+                { id: 'vendors', label: 'Vendors' },
+              ].map((t) => (
+                <Tab key={t.id} value={t.id} label={t.label} />
+              ))}
+            </Tabs>
 
             {exportSection === 'work_orders' ? (
               <Card>
@@ -715,149 +593,139 @@ const Reporting = () => {
                   </div>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Date Range</div>
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <input
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Date Range
+                      </Typography>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                        <TextField
+                          size="small"
                           type="date"
                           value={exportForm.start || dateRange.start}
                           onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
-                          className="bg-transparent outline-none"
+                          InputProps={{
+                            startAdornment: (
+                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                                <Calendar size={16} />
+                              </Box>
+                            ),
+                          }}
                         />
-                        <span className="text-gray-300">-</span>
-                        <input
+                        <TextField
+                          size="small"
                           type="date"
                           value={exportForm.end || dateRange.end}
                           onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
-                          className="bg-transparent outline-none"
                         />
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500">{exportDateRangeText}</div>
-                    </div>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        {exportDateRangeText}
+                      </Typography>
+                    </Box>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="exportFormat"
-                            checked={exportForm.format === 'csv'}
-                            onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))}
-                          />
-                          CSV (Excel)
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="exportFormat"
-                            checked={exportForm.format === 'pdf'}
-                            onChange={() => setExportForm((p) => ({ ...p, format: 'pdf' }))}
-                          />
-                          PDF
-                        </label>
-                      </div>
-                    </div>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                        <FormControlLabel value="pdf" control={<Radio size="small" />} label="PDF" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Work Orders to include in this date range</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={exportForm.includePlannedOrCreated}
-                            onChange={(e) => setExportForm((p) => ({ ...p, includePlannedOrCreated: e.target.checked }))}
-                          />
-                          Planned or Created
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={exportForm.includeDue}
-                            onChange={(e) => setExportForm((p) => ({ ...p, includeDue: e.target.checked }))}
-                          />
-                          Due
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={exportForm.includeCompleted}
-                            onChange={(e) => setExportForm((p) => ({ ...p, includeCompleted: e.target.checked }))}
-                          />
-                          Completed
-                        </label>
-                      </div>
-                    </div>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Work Orders to include in this date range</FormLabel>
+                      <FormGroup>
+                        <FormControlLabel
+                          control={(
+                            <Checkbox
+                              size="small"
+                              checked={exportForm.includePlannedOrCreated}
+                              onChange={(e) => setExportForm((p) => ({ ...p, includePlannedOrCreated: e.target.checked }))}
+                            />
+                          )}
+                          label="Planned or Created"
+                        />
+                        <FormControlLabel
+                          control={(
+                            <Checkbox
+                              size="small"
+                              checked={exportForm.includeDue}
+                              onChange={(e) => setExportForm((p) => ({ ...p, includeDue: e.target.checked }))}
+                            />
+                          )}
+                          label="Due"
+                        />
+                        <FormControlLabel
+                          control={(
+                            <Checkbox
+                              size="small"
+                              checked={exportForm.includeCompleted}
+                              onChange={(e) => setExportForm((p) => ({ ...p, includeCompleted: e.target.checked }))}
+                            />
+                          )}
+                          label="Completed"
+                        />
+                      </FormGroup>
+                    </FormControl>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Procedure Format</div>
-                      <div className="mt-2 relative">
-                        <select
-                          value={exportForm.procedureFormat}
-                          onChange={(e) => setExportForm((p) => ({ ...p, procedureFormat: e.target.value }))}
-                          className="w-full appearance-none rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-sm text-gray-700"
-                        >
-                          <option value="summary">Summary</option>
-                          <option value="full">Full</option>
-                          <option value="none">None</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      </div>
-                    </div>
+                    <FormControl size="small" sx={{ maxWidth: 320 }}>
+                      <FormLabel sx={{ fontWeight: 700 }}>Procedure Format</FormLabel>
+                      <Select
+                        value={exportForm.procedureFormat}
+                        onChange={(e) => setExportForm((p) => ({ ...p, procedureFormat: e.target.value }))}
+                      >
+                        <MenuItem value="summary">Summary</MenuItem>
+                        <MenuItem value="full">Full</MenuItem>
+                        <MenuItem value="none">None</MenuItem>
+                      </Select>
+                    </FormControl>
 
-                    <div>
-                      <button
+                    <Box>
+                      <Button
                         type="button"
+                        variant="outlined"
+                        color="inherit"
                         onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        endIcon={<ChevronDown size={18} />}
                       >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'id', label: 'ID' },
-                            { key: 'title', label: 'Title' },
-                            { key: 'status', label: 'Status' },
-                            { key: 'priority', label: 'Priority' },
-                            { key: 'asset', label: 'Asset' },
-                            { key: 'location', label: 'Location' },
-                            { key: 'assignee', label: 'Assigned To' },
-                            { key: 'dueDate', label: 'Due Date' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'id', label: 'ID' },
+                              { key: 'title', label: 'Title' },
+                              { key: 'status', label: 'Status' },
+                              { key: 'priority', label: 'Priority' },
+                              { key: 'asset', label: 'Asset' },
+                              { key: 'location', label: 'Location' },
+                              { key: 'assignee', label: 'Assigned To' },
+                              { key: 'dueDate', label: 'Due Date' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => alert('Preview would be implemented here.')}
-                        className="text-sm text-primary-600 hover:text-primary-700"
-                      >
-                        Preview
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => alert('Schedule would be implemented here.')}
-                        className="text-sm text-primary-600 hover:text-primary-700"
-                      >
-                        Schedule
-                      </button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Preview would be implemented here.')}>Preview</Button>
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : exportSection === 'assets' ? (
@@ -1219,17 +1087,8 @@ const Reporting = () => {
                 </CardBody>
               </Card>
             )}
-          </div>
-        ) : (
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">{tabs.find((t) => t.id === activeTab)?.label}</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="text-sm text-gray-600">This tab is included to match the Reporting navigation. Work Orders contains the main dashboard layout.</div>
-            </CardBody>
-          </Card>
-        )
+          </Stack>
+        ) : null
       ) : (
         <div className="space-y-6">
           <div className="text-sm font-semibold text-gray-900">Work Orders</div>
@@ -1424,7 +1283,7 @@ const Reporting = () => {
         </div>
       )}
 
-    </div>
+    </Stack>
   );
 };
 

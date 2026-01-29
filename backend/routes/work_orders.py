@@ -235,6 +235,10 @@ def update_work_order(
     is_now_done = next_status in {"done", "completed"}
     was_done = prev_status in {"done", "completed"}
 
+    if is_now_done and not was_done:
+        if not getattr(work_order, "completed_at", None):
+            work_order.completed_at = datetime.utcnow()
+
     output_execution_id = None
     if is_now_done and not was_done and work_order.procedure_id:
         execution = (
