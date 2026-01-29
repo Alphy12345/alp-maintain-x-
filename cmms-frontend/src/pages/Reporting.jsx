@@ -24,6 +24,8 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
+  Grid,
+  IconButton,
   MenuItem,
   Paper,
   Radio,
@@ -63,21 +65,42 @@ const tabs = [
   { id: 'export_data', label: 'Export Data' },
 ];
 
-const formatInputDate = (d) => {
+const formatDateForInput = (d) => {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 };
 
+const formatInputDate = (value) => {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+};
+
 const Gauge = ({ label, valueText }) => (
-  <div className="flex flex-col items-center justify-center">
-    <div className="relative w-40 h-20 overflow-hidden">
-      <div className="absolute inset-x-0 bottom-0 h-40 w-40 rounded-full border-[18px] border-primary-100" />
-    </div>
-    <div className="text-xs text-gray-500">{label}</div>
-    <div className="text-xs font-semibold text-gray-900">{valueText}</div>
-  </div>
+  <Stack alignItems="center" justifyContent="center" spacing={0.5}>
+    <Box sx={{ position: 'relative', width: 160, height: 80, overflow: 'hidden' }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: 160,
+          height: 160,
+          borderRadius: '50%',
+          border: '18px solid',
+          borderColor: 'primary.100',
+        }}
+      />
+    </Box>
+    <Typography variant="caption" color="text.secondary">
+      {label}
+    </Typography>
+    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+      {valueText}
+    </Typography>
+  </Stack>
 );
 
 const Reporting = () => {
@@ -106,7 +129,7 @@ const Reporting = () => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 29);
-    return { start: formatInputDate(start), end: formatInputDate(end) };
+    return { start: formatDateForInput(start), end: formatDateForInput(end) };
   });
 
   const [filters, setFilters] = useState({ assignedTo: '', dueDate: '', priority: '' });
@@ -364,7 +387,7 @@ const Reporting = () => {
       if (filters.assignedTo && wo.assigneeId !== filters.assignedTo) return false;
       if (filters.priority && wo.priority !== filters.priority) return false;
       if (filters.dueDate) {
-        const due = wo.dueDate ? formatInputDate(new Date(wo.dueDate)) : '';
+        const due = wo.dueDate ? formatDateForInput(new Date(wo.dueDate)) : '';
         if (due !== filters.dueDate) return false;
       }
       return true;
@@ -581,16 +604,14 @@ const Reporting = () => {
             {exportSection === 'work_orders' ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-900">Export Work Order List</div>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Filter className="h-4 w-4 text-gray-400" />
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Export Work Order List
+                    </Typography>
+                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
                       Filters
-                    </button>
-                  </div>
+                    </Button>
+                  </Stack>
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3} sx={{ maxWidth: 720 }}>
@@ -731,235 +752,245 @@ const Reporting = () => {
             ) : exportSection === 'assets' ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-900">Export Asset List</div>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Filter className="h-4 w-4 text-gray-400" />
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Export Asset List
+                    </Typography>
+                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
                       Filters
-                    </button>
-                  </div>
+                    </Button>
+                  </Stack>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="exportAssetFormat"
-                            checked={exportForm.format === 'csv'}
-                            onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))}
-                          />
-                          CSV (Excel)
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="exportAssetFormat"
-                            checked={exportForm.format === 'qr_pdf'}
-                            onChange={() => setExportForm((p) => ({ ...p, format: 'qr_pdf' }))}
-                          />
-                          QR Codes (PDF)
-                        </label>
-                      </div>
-                    </div>
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                        <FormControlLabel value="qr_pdf" control={<Radio size="small" />} label="QR Codes (PDF)" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <div>
-                      <button
+                    <Box>
+                      <Button
                         type="button"
+                        variant="outlined"
+                        color="inherit"
                         onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        endIcon={<ChevronDown size={18} />}
                       >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'id', label: 'ID' },
-                            { key: 'name', label: 'Name' },
-                            { key: 'status', label: 'Status' },
-                            { key: 'location', label: 'Location' },
-                            { key: 'category', label: 'Category' },
-                            { key: 'serialNumber', label: 'Serial Number' },
-                            { key: 'model', label: 'Model' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'id', label: 'ID' },
+                              { key: 'name', label: 'Name' },
+                              { key: 'status', label: 'Status' },
+                              { key: 'location', label: 'Location' },
+                              { key: 'category', label: 'Category' },
+                              { key: 'serialNumber', label: 'Serial Number' },
+                              { key: 'model', label: 'Model' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => alert('Schedule would be implemented here.')}
-                        className="text-sm text-primary-600 hover:text-primary-700"
-                      >
-                        Schedule
-                      </button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : exportSection === 'asset_status' ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-900">Export Asset Status List</div>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Filter className="h-4 w-4 text-gray-400" />
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Export Asset Status List
+                    </Typography>
+                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
                       Filters
-                    </button>
-                  </div>
+                    </Button>
+                  </Stack>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Date Range</div>
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <input
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Date Range
+                      </Typography>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                        <TextField
+                          size="small"
                           type="date"
                           value={exportForm.start || dateRange.start}
                           onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
-                          className="bg-transparent outline-none"
+                          InputProps={{
+                            startAdornment: (
+                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                                <Calendar size={16} />
+                              </Box>
+                            ),
+                          }}
                         />
-                        <span className="text-gray-300">-</span>
-                        <input
+                        <TextField
+                          size="small"
                           type="date"
                           value={exportForm.end || dateRange.end}
                           onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
-                          className="bg-transparent outline-none"
                         />
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500">{exportDateRangeText}</div>
-                    </div>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        {exportDateRangeText}
+                      </Typography>
+                    </Box>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="exportAssetStatusFormat" checked={exportForm.format === 'csv'} onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))} />
-                          CSV (Excel)
-                        </label>
-                      </div>
-                    </div>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <div>
-                      <button
+                    <Box>
+                      <Button
                         type="button"
+                        variant="outlined"
+                        color="inherit"
                         onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        endIcon={<ChevronDown size={18} />}
                       >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'asset', label: 'Asset' },
-                            { key: 'status', label: 'Status' },
-                            { key: 'downtimeType', label: 'Downtime Type' },
-                            { key: 'downtimeReason', label: 'Downtime Reason' },
-                            { key: 'timestamp', label: 'Timestamp' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'asset', label: 'Asset' },
+                              { key: 'status', label: 'Status' },
+                              { key: 'downtimeType', label: 'Downtime Type' },
+                              { key: 'downtimeReason', label: 'Downtime Reason' },
+                              { key: 'timestamp', label: 'Timestamp' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button type="button" onClick={() => alert('Schedule would be implemented here.')} className="text-sm text-primary-600 hover:text-primary-700">Schedule</button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : exportSection === 'parts' ? (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-900">Export Part List</div>
-                    <button type="button" className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
-                      <Filter className="h-4 w-4 text-gray-400" />
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Export Part List
+                    </Typography>
+                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
                       Filters
-                    </button>
-                  </div>
+                    </Button>
+                  </Stack>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="exportPartsFormat" checked={exportForm.format === 'csv'} onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))} />
-                          CSV (Excel)
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="exportPartsFormat" checked={exportForm.format === 'qr_pdf'} onChange={() => setExportForm((p) => ({ ...p, format: 'qr_pdf' }))} />
-                          QR Codes (PDF)
-                        </label>
-                      </div>
-                    </div>
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                        <FormControlLabel value="qr_pdf" control={<Radio size="small" />} label="QR Codes (PDF)" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input type="checkbox" checked={exportForm.includeOnlyRestock} onChange={(e) => setExportForm((p) => ({ ...p, includeOnlyRestock: e.target.checked }))} />
-                      Include only Parts that need restock
-                    </label>
+                    <FormControl>
+                      <FormGroup>
+                        <FormControlLabel
+                          control={(
+                            <Checkbox
+                              size="small"
+                              checked={exportForm.includeOnlyRestock}
+                              onChange={(e) => setExportForm((p) => ({ ...p, includeOnlyRestock: e.target.checked }))}
+                            />
+                          )}
+                          label="Include only Parts that need restock"
+                        />
+                      </FormGroup>
+                    </FormControl>
 
-                    <div>
-                      <button type="button" onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))} className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Box>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
+                        endIcon={<ChevronDown size={18} />}
+                      >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'id', label: 'ID' },
-                            { key: 'name', label: 'Name' },
-                            { key: 'stock', label: 'Current Stock' },
-                            { key: 'minStock', label: 'Min Stock' },
-                            { key: 'location', label: 'Location' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'id', label: 'ID' },
+                              { key: 'name', label: 'Name' },
+                              { key: 'stock', label: 'Current Stock' },
+                              { key: 'minStock', label: 'Min Stock' },
+                              { key: 'location', label: 'Location' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button type="button" onClick={() => alert('Schedule would be implemented here.')} className="text-sm text-primary-600 hover:text-primary-700">Schedule</button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : exportSection === 'part_transactions' ? (
@@ -968,58 +999,85 @@ const Reporting = () => {
                   <div className="text-sm font-semibold text-gray-900">Part Transactions</div>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Date Range</div>
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <input type="date" value={exportForm.start || dateRange.start} onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))} className="bg-transparent outline-none" />
-                        <span className="text-gray-300">-</span>
-                        <input type="date" value={exportForm.end || dateRange.end} onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))} className="bg-transparent outline-none" />
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500">{exportDateRangeText}</div>
-                    </div>
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Date Range
+                      </Typography>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                        <TextField
+                          size="small"
+                          type="date"
+                          value={exportForm.start || dateRange.start}
+                          onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
+                          InputProps={{
+                            startAdornment: (
+                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                                <Calendar size={16} />
+                              </Box>
+                            ),
+                          }}
+                        />
+                        <TextField
+                          size="small"
+                          type="date"
+                          value={exportForm.end || dateRange.end}
+                          onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
+                        />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        {exportDateRangeText}
+                      </Typography>
+                    </Box>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="exportPartTransactionsFormat" checked={exportForm.format === 'csv'} onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))} />
-                          CSV (Excel)
-                        </label>
-                      </div>
-                    </div>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <div>
-                      <button type="button" onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))} className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Box>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
+                        endIcon={<ChevronDown size={18} />}
+                      >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'part', label: 'Part' },
-                            { key: 'type', label: 'Transaction Type' },
-                            { key: 'qty', label: 'Quantity' },
-                            { key: 'date', label: 'Date' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'part', label: 'Part' },
+                              { key: 'type', label: 'Transaction Type' },
+                              { key: 'qty', label: 'Quantity' },
+                              { key: 'date', label: 'Date' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button type="button" onClick={() => alert('Schedule would be implemented here.')} className="text-sm text-primary-600 hover:text-primary-700">Schedule</button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : exportSection === 'vendors' ? (
@@ -1028,47 +1086,55 @@ const Reporting = () => {
                   <div className="text-sm font-semibold text-gray-900">Export Vendor List</div>
                 </CardHeader>
                 <CardBody>
-                  <div className="space-y-6 max-w-xl">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Export Format</div>
-                      <div className="mt-2 space-y-2 text-sm text-gray-700">
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="exportVendorsFormat" checked={exportForm.format === 'csv'} onChange={() => setExportForm((p) => ({ ...p, format: 'csv' }))} />
-                          CSV (Excel)
-                        </label>
-                      </div>
-                    </div>
+                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                    <FormControl>
+                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                      <RadioGroup
+                        row
+                        value={exportForm.format}
+                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                      >
+                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                      </RadioGroup>
+                    </FormControl>
 
-                    <div>
-                      <button type="button" onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))} className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Box>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
+                        endIcon={<ChevronDown size={18} />}
+                      >
                         Columns
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${exportForm.columnsOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {exportForm.columnsOpen && (
-                        <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-700 space-y-2">
-                          {[
-                            { key: 'id', label: 'ID' },
-                            { key: 'name', label: 'Name' },
-                            { key: 'email', label: 'Email' },
-                            { key: 'phone', label: 'Phone' },
-                          ].map((c) => (
-                            <label key={c.key} className="flex items-center gap-2">
-                              <input type="checkbox" defaultChecked />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Button>
+                      <Collapse in={exportForm.columnsOpen}>
+                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                          <FormGroup>
+                            {[
+                              { key: 'id', label: 'ID' },
+                              { key: 'name', label: 'Name' },
+                              { key: 'email', label: 'Email' },
+                              { key: 'phone', label: 'Phone' },
+                            ].map((c) => (
+                              <FormControlLabel
+                                key={c.key}
+                                control={<Checkbox defaultChecked size="small" />}
+                                label={c.label}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Paper>
+                      </Collapse>
+                    </Box>
 
-                    <div className="flex items-center justify-end gap-3 pt-2">
-                      <button type="button" onClick={() => alert('Schedule would be implemented here.')} className="text-sm text-primary-600 hover:text-primary-700">Schedule</button>
-                      <Button onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
                         Export
                       </Button>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Stack>
                 </CardBody>
               </Card>
             ) : (
@@ -1090,33 +1156,54 @@ const Reporting = () => {
           </Stack>
         ) : null
       ) : (
-        <div className="space-y-6">
-          <div className="text-sm font-semibold text-gray-900">Work Orders</div>
+        <Stack spacing={2.5}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Work Orders
+          </Typography>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Grid container spacing={2}>
+            <Grid item xs={12} lg={6}>
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-primary-700">Created vs. Completed</div>
-                  <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-                </div>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    Created vs. Completed
+                  </Typography>
+                  <IconButton size="small" color="inherit">
+                    +
+                  </IconButton>
+                </Stack>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.createdCount || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Created</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.completedCount || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-green-200 px-2 py-1 text-xs text-green-700">Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{Number.isFinite(derived.percentCompleted) ? derived.percentCompleted : '-'}%</div>
-                    <div className="text-xs text-gray-500">Percent Completed</div>
-                  </div>
-                </div>
-                <div className="h-56">
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.createdCount || '-'}
+                      </Typography>
+                      <Chip label="Created" size="small" variant="outlined" color="primary" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.completedCount || '-'}
+                      </Typography>
+                      <Chip label="Completed" size="small" variant="outlined" color="success" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {Number.isFinite(derived.percentCompleted) ? derived.percentCompleted : '-'}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Percent Completed
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                </Grid>
+                <Box sx={{ height: 224 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1127,37 +1214,61 @@ const Reporting = () => {
                       <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
+                </Box>
               </CardBody>
             </Card>
 
+            </Grid>
+            <Grid item xs={12} lg={6}>
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-primary-700">Work Orders by Type</div>
-                  <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-                </div>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    Work Orders by Type
+                  </Typography>
+                  <IconButton size="small" color="inherit">
+                    +
+                  </IconButton>
+                </Stack>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.byType.preventive || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-green-200 px-2 py-1 text-xs text-green-700">Preventive</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.byType.reactive || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Reactive</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.byType.other || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700">Other</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.createdCount ? Math.round((derived.byType.preventive / Math.max(derived.createdCount, 1)) * 100) : '-'}%</div>
-                    <div className="text-xs text-gray-500">Total Preventive Ratio</div>
-                  </div>
-                </div>
-                <div className="h-56">
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={6} sm={3}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.byType.preventive || '-'}
+                      </Typography>
+                      <Chip label="Preventive" size="small" variant="outlined" color="success" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.byType.reactive || '-'}
+                      </Typography>
+                      <Chip label="Reactive" size="small" variant="outlined" color="primary" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.byType.other || '-'}
+                      </Typography>
+                      <Chip label="Other" size="small" variant="outlined" color="default" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.createdCount ? Math.round((derived.byType.preventive / Math.max(derived.createdCount, 1)) * 100) : '-'}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Preventive Ratio
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                </Grid>
+                <Box sx={{ height: 224 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1169,33 +1280,53 @@ const Reporting = () => {
                       <Bar dataKey="other" stackId="a" fill="#94a3b8" />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </Box>
               </CardBody>
             </Card>
 
+            </Grid>
+
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-primary-700">Non-Repeating vs. Repeating</div>
-                  <Button variant="secondary" size="sm">Add to Dashboard</Button>
-                </div>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    Non-Repeating vs. Repeating
+                  </Typography>
+                  <Button type="button" variant="outlined" size="small" color="inherit">
+                    Add to Dashboard
+                  </Button>
+                </Stack>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.nonRepeatingCount || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Non-Repeating</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.repeatingCount || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Repeating</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.createdCount ? Math.round((derived.repeatingCount / Math.max(derived.createdCount, 1)) * 100) : '-'}%</div>
-                    <div className="text-xs text-gray-500">Repeating Ratio</div>
-                  </div>
-                </div>
-                <div className="h-56">
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.nonRepeatingCount || '-'}
+                      </Typography>
+                      <Chip label="Non-Repeating" size="small" variant="outlined" color="primary" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.repeatingCount || '-'}
+                      </Typography>
+                      <Chip label="Repeating" size="small" variant="outlined" color="primary" />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.createdCount ? Math.round((derived.repeatingCount / Math.max(derived.createdCount, 1)) * 100) : '-'}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Repeating Ratio
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                </Grid>
+                <Box sx={{ height: 224 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1206,26 +1337,61 @@ const Reporting = () => {
                       <Line type="monotone" dataKey="repeating" stroke="#6366f1" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
+                </Box>
               </CardBody>
             </Card>
 
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-primary-700">Status</div>
-                  <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-                </div>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    Status
+                  </Typography>
+                  <IconButton size="small" color="inherit">
+                    +
+                  </IconButton>
+                </Stack>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="text-center"><div className="text-lg font-bold text-gray-900">{derived.statusCounts.open || '-'}</div><div className="mt-1 inline-flex rounded-md border border-primary-200 px-2 py-1 text-xs text-primary-700">Open</div></div>
-                    <div className="text-center"><div className="text-lg font-bold text-gray-900">{derived.statusCounts.on_hold || '-'}</div><div className="mt-1 inline-flex rounded-md border border-orange-200 px-2 py-1 text-xs text-orange-700">On Hold</div></div>
-                    <div className="text-center"><div className="text-lg font-bold text-gray-900">{derived.statusCounts.in_progress || '-'}</div><div className="mt-1 inline-flex rounded-md border border-green-200 px-2 py-1 text-xs text-green-700">In Progress</div></div>
-                    <div className="text-center"><div className="text-lg font-bold text-gray-900">{derived.statusCounts.done || '-'}</div><div className="mt-1 inline-flex rounded-md border border-indigo-200 px-2 py-1 text-xs text-indigo-700">Done</div></div>
-                  </div>
-                  <div className="h-56">
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                            {derived.statusCounts.open || '-'}
+                          </Typography>
+                          <Chip label="Open" size="small" variant="outlined" color="primary" />
+                        </Stack>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                            {derived.statusCounts.on_hold || '-'}
+                          </Typography>
+                          <Chip label="On Hold" size="small" variant="outlined" color="warning" />
+                        </Stack>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                            {derived.statusCounts.in_progress || '-'}
+                          </Typography>
+                          <Chip label="In Progress" size="small" variant="outlined" color="success" />
+                        </Stack>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Stack alignItems="center" spacing={0.5}>
+                          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                            {derived.statusCounts.done || '-'}
+                          </Typography>
+                          <Chip label="Done" size="small" variant="outlined" color="info" />
+                        </Stack>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ height: 224 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={75} paddingAngle={2}>
@@ -1236,19 +1402,26 @@ const Reporting = () => {
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
-                  </div>
-                </div>
+                    </Box>
+                  </Grid>
+                </Grid>
               </CardBody>
             </Card>
-          </div>
+          </Grid>
 
-          <div className="text-sm font-semibold text-gray-900">All Repeating Work Orders</div>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            All Repeating Work Orders
+          </Typography>
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-gray-900">All Repeating Work Orders</div>
-                <Button variant="secondary" size="sm">Add to Dashboard</Button>
-              </div>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  All Repeating Work Orders
+                </Typography>
+                <Button type="button" variant="outlined" size="small" color="inherit">
+                  Add to Dashboard
+                </Button>
+              </Stack>
             </CardHeader>
             <CardBody>
               <Table columns={repeatingColumns} data={repeatingWorkOrders} />
@@ -1257,30 +1430,43 @@ const Reporting = () => {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-primary-700">On Time vs. Overdue</div>
-                <button type="button" className="h-7 w-7 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">+</button>
-              </div>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  On Time vs. Overdue
+                </Typography>
+                <IconButton size="small" color="inherit">
+                  +
+                </IconButton>
+              </Stack>
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{Math.max(derived.createdCount - derived.overdueCount, 0) || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-green-200 px-2 py-1 text-xs text-green-700">On Time</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{derived.overdueCount || '-'}</div>
-                    <div className="mt-1 inline-flex items-center justify-center rounded-md border border-red-200 px-2 py-1 text-xs text-red-700">Overdue</div>
-                  </div>
-                </div>
-
-                <Gauge label="Total % On Time" valueText={derived.createdCount ? `${Math.round(((derived.createdCount - derived.overdueCount) / Math.max(derived.createdCount, 1)) * 100)}%` : '-'} />
-                <Gauge label="On Time" valueText={derived.createdCount ? `${Math.round(((derived.createdCount - derived.overdueCount) / Math.max(derived.createdCount, 1)) * 100)}%` : '-'} />
-              </div>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} lg={3}>
+                  <Stack direction="row" spacing={2} justifyContent="center">
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {Math.max(derived.createdCount - derived.overdueCount, 0) || '-'}
+                      </Typography>
+                      <Chip label="On Time" size="small" variant="outlined" color="success" />
+                    </Stack>
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        {derived.overdueCount || '-'}
+                      </Typography>
+                      <Chip label="Overdue" size="small" variant="outlined" color="error" />
+                    </Stack>
+                  </Stack>
+                </Grid>
+                <Grid item xs={12} lg={4.5}>
+                  <Gauge label="Total % On Time" valueText={derived.createdCount ? `${Math.round(((derived.createdCount - derived.overdueCount) / Math.max(derived.createdCount, 1)) * 100)}%` : '-'} />
+                </Grid>
+                <Grid item xs={12} lg={4.5}>
+                  <Gauge label="On Time" valueText={derived.createdCount ? `${Math.round(((derived.createdCount - derived.overdueCount) / Math.max(derived.createdCount, 1)) * 100)}%` : '-'} />
+                </Grid>
+              </Grid>
             </CardBody>
           </Card>
-        </div>
+        </Stack>
       )}
 
     </Stack>

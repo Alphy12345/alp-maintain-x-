@@ -6,10 +6,13 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   Divider,
   FormControl,
+  FormControlLabel,
   Grid,
+  IconButton,
   InputAdornment,
   InputLabel,
   List as MuiList,
@@ -793,29 +796,33 @@ const Procedures = () => {
                   </Stack>
                 </Stack>
 
-                <div>
-                  <div className="text-xs text-gray-500">Description</div>
-                  <div className="text-sm text-gray-900">{selectedProcedure.description || '—'}</div>
-                </div>
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">Description</Typography>
+                  <Typography variant="body2">{selectedProcedure.description || '—'}</Typography>
+                </Stack>
 
-                <div>
-                  <div className="text-xs text-gray-500">Sections</div>
+                <Stack spacing={1}>
+                  <Typography variant="caption" color="text.secondary">Sections</Typography>
                   {Array.isArray(selectedProcedure.sections) && selectedProcedure.sections.length > 0 ? (
-                    <div className="mt-2 space-y-3">
+                    <Stack spacing={1.5}>
                       {selectedProcedure.sections
                         .slice()
                         .sort((a, b) => Number(a?.order || 0) - Number(b?.order || 0))
                         .map((sec) => {
                           const fields = Array.isArray(sec?.fields) ? sec.fields : [];
                           return (
-                            <div key={sec?.id || `${sec?.title}-${sec?.order}`} className="rounded-md border border-gray-200 p-3">
-                              <div className="text-sm font-semibold text-gray-900">{sec?.title || 'Untitled section'}</div>
+                            <Paper key={sec?.id || `${sec?.title}-${sec?.order}`} variant="outlined" sx={{ p: 2 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                {sec?.title || 'Untitled section'}
+                              </Typography>
                               {sec?.description ? (
-                                <div className="mt-1 text-sm text-gray-700">{sec.description}</div>
+                                <Typography variant="body2" sx={{ mt: 0.5 }} color="text.secondary">
+                                  {sec.description}
+                                </Typography>
                               ) : null}
 
                               {fields.length > 0 ? (
-                                <div className="mt-3 space-y-2">
+                                <Stack spacing={1} sx={{ mt: 1.5 }}>
                                   {fields
                                     .slice()
                                     .sort((a, b) => Number(a?.order || 0) - Number(b?.order || 0))
@@ -826,156 +833,188 @@ const Procedures = () => {
                                       const fieldKey = String(f?.id || `${f?.label}-${f?.order}`);
                                       const selected = String(inspectionValues?.[fieldKey] || '');
                                       const rawValue = fieldKey in (fieldValues || {}) ? fieldValues[fieldKey] : (f?.value ?? '');
+
                                       return (
-                                        <div
+                                        <Paper
                                           key={f?.id || `${f?.label}-${f?.order}`}
-                                          className="rounded-md border border-gray-100 bg-gray-50 p-3"
+                                          variant="outlined"
+                                          sx={{ p: 2, bgcolor: 'grey.50', borderColor: 'grey.200' }}
                                         >
-                                          <div className="flex items-start justify-between gap-3">
-                                            <div className="text-sm font-medium text-gray-900">{f?.label || 'Untitled field'}</div>
-                                            <div className="text-xs text-gray-600">{fieldType}</div>
-                                          </div>
-                                          <div className="mt-1 text-xs text-gray-600">
+                                          <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                              {f?.label || 'Untitled field'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                              {fieldType}
+                                            </Typography>
+                                          </Stack>
+
+                                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
                                             {Number(f?.required) ? 'Required' : 'Optional'}
-                                          </div>
+                                          </Typography>
                                           {f?.help_text ? (
-                                            <div className="mt-1 text-xs text-gray-600">{f.help_text}</div>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                                              {f.help_text}
+                                            </Typography>
                                           ) : null}
                                           {options.length > 0 ? (
-                                            <div className="mt-2 text-xs text-gray-600">
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                               Options: {options.join(', ')}
-                                            </div>
+                                            </Typography>
                                           ) : null}
 
                                           {fieldType === 'text' ? (
-                                            <div className="mt-3">
-                                              <textarea
-                                                rows={3}
-                                                value={String(rawValue ?? '')}
-                                                onChange={(e) => {
-                                                  const v = e.target.value;
-                                                  setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
-                                                }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                              />
-                                            </div>
+                                            <TextField
+                                              sx={{ mt: 1.5 }}
+                                              size="small"
+                                              fullWidth
+                                              multiline
+                                              minRows={3}
+                                              value={String(rawValue ?? '')}
+                                              onChange={(e) => {
+                                                const v = e.target.value;
+                                                setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
+                                              }}
+                                            />
                                           ) : null}
 
                                           {fieldType === 'number' || fieldType === 'amount' ? (
-                                            <div className="mt-3">
-                                              <input
-                                                type="number"
-                                                value={rawValue === null || rawValue === undefined ? '' : String(rawValue)}
-                                                onChange={(e) => {
-                                                  const v = e.target.value;
-                                                  setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
-                                                }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                              />
-                                            </div>
+                                            <TextField
+                                              sx={{ mt: 1.5 }}
+                                              size="small"
+                                              fullWidth
+                                              type="number"
+                                              value={rawValue === null || rawValue === undefined ? '' : String(rawValue)}
+                                              onChange={(e) => {
+                                                const v = e.target.value;
+                                                setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
+                                              }}
+                                              InputProps={
+                                                fieldType === 'amount'
+                                                  ? { startAdornment: <InputAdornment position="start">$</InputAdornment> }
+                                                  : undefined
+                                              }
+                                            />
                                           ) : null}
 
                                           {fieldType === 'checkbox' ? (
-                                            <div className="mt-3 flex items-center gap-2">
-                                              <input
-                                                type="checkbox"
-                                                checked={Boolean(rawValue)}
-                                                onChange={(e) => {
-                                                  const v = e.target.checked;
-                                                  setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
-                                                }}
-                                                className="h-4 w-4"
+                                            <Box sx={{ mt: 1.5 }}>
+                                              <FormControlLabel
+                                                control={(
+                                                  <Checkbox
+                                                    size="small"
+                                                    checked={Boolean(rawValue)}
+                                                    onChange={(e) => {
+                                                      const v = e.target.checked;
+                                                      setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
+                                                    }}
+                                                  />
+                                                )}
+                                                label="Checked"
                                               />
-                                              <span className="text-sm text-gray-700">Checked</span>
-                                            </div>
+                                            </Box>
                                           ) : null}
 
                                           {fieldType === 'multiple_choice' ? (
-                                            <div className="mt-3">
-                                              <select
+                                            <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                                              <Select
                                                 value={String(rawValue ?? '')}
                                                 onChange={(e) => {
                                                   const v = e.target.value;
                                                   setFieldValues((p) => ({ ...(p || {}), [fieldKey]: v }));
                                                 }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
+                                                displayEmpty
                                               >
-                                                <option value="">Select…</option>
+                                                <MenuItem value="">Select…</MenuItem>
                                                 {options.map((opt) => (
-                                                  <option key={opt} value={opt}>{opt}</option>
+                                                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                                                 ))}
-                                              </select>
-                                            </div>
+                                              </Select>
+                                            </FormControl>
                                           ) : null}
 
                                           {fieldType === 'checklist' ? (
-                                            <div className="mt-3 space-y-2">
+                                            <Stack spacing={0.5} sx={{ mt: 1.5 }}>
                                               {options.map((opt) => {
                                                 const list = Array.isArray(rawValue) ? rawValue : [];
                                                 const checked = list.includes(opt);
                                                 return (
-                                                  <label key={opt} className="flex items-center gap-2 text-sm text-gray-700">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={checked}
-                                                      onChange={(e) => {
-                                                        const next = new Set(Array.isArray(rawValue) ? rawValue : []);
-                                                        if (e.target.checked) next.add(opt);
-                                                        else next.delete(opt);
-                                                        setFieldValues((p) => ({ ...(p || {}), [fieldKey]: Array.from(next) }));
-                                                      }}
-                                                      className="h-4 w-4"
-                                                    />
-                                                    {opt}
-                                                  </label>
+                                                  <FormControlLabel
+                                                    key={opt}
+                                                    control={(
+                                                      <Checkbox
+                                                        size="small"
+                                                        checked={checked}
+                                                        onChange={(e) => {
+                                                          const next = new Set(Array.isArray(rawValue) ? rawValue : []);
+                                                          if (e.target.checked) next.add(opt);
+                                                          else next.delete(opt);
+                                                          setFieldValues((p) => ({ ...(p || {}), [fieldKey]: Array.from(next) }));
+                                                        }}
+                                                      />
+                                                    )}
+                                                    label={opt}
+                                                  />
                                                 );
                                               })}
                                               {options.length === 0 ? (
-                                                <div className="text-sm text-gray-500">No options</div>
+                                                <Typography variant="body2" color="text.secondary">No options</Typography>
                                               ) : null}
-                                            </div>
+                                            </Stack>
                                           ) : null}
 
                                           {fieldType === 'inspection_check' ? (
-                                            <div className="mt-3 grid grid-cols-3 gap-3">
-                                              <button
-                                                type="button"
-                                                onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'pass' }))}
-                                                className={`px-3 py-2 rounded-md border text-sm ${selected === 'pass' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-green-600 hover:bg-gray-50'}`}
-                                              >
-                                                Pass
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'flag' }))}
-                                                className={`px-3 py-2 rounded-md border text-sm ${selected === 'flag' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-orange-600 hover:bg-gray-50'}`}
-                                              >
-                                                Flag
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'fail' }))}
-                                                className={`px-3 py-2 rounded-md border text-sm ${selected === 'fail' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-red-600 hover:bg-gray-50'}`}
-                                              >
-                                                Fail
-                                              </button>
-                                            </div>
+                                            <Grid container spacing={1.5} sx={{ mt: 1.5 }}>
+                                              <Grid item xs={12} sm={4}>
+                                                <Button
+                                                  fullWidth
+                                                  type="button"
+                                                  variant={selected === 'pass' ? 'contained' : 'outlined'}
+                                                  color="success"
+                                                  onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'pass' }))}
+                                                >
+                                                  Pass
+                                                </Button>
+                                              </Grid>
+                                              <Grid item xs={12} sm={4}>
+                                                <Button
+                                                  fullWidth
+                                                  type="button"
+                                                  variant={selected === 'flag' ? 'contained' : 'outlined'}
+                                                  color="warning"
+                                                  onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'flag' }))}
+                                                >
+                                                  Flag
+                                                </Button>
+                                              </Grid>
+                                              <Grid item xs={12} sm={4}>
+                                                <Button
+                                                  fullWidth
+                                                  type="button"
+                                                  variant={selected === 'fail' ? 'contained' : 'outlined'}
+                                                  color="error"
+                                                  onClick={() => setInspectionValues((p) => ({ ...p, [fieldKey]: 'fail' }))}
+                                                >
+                                                  Fail
+                                                </Button>
+                                              </Grid>
+                                            </Grid>
                                           ) : null}
-                                        </div>
+                                        </Paper>
                                       );
                                     })}
-                                </div>
+                                </Stack>
                               ) : (
-                                <div className="mt-2 text-sm text-gray-500">No fields</div>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No fields</Typography>
                               )}
-                            </div>
+                            </Paper>
                           );
                         })}
-                    </div>
+                    </Stack>
                   ) : (
-                    <div className="text-sm text-gray-900">0</div>
+                    <Typography variant="body2">0</Typography>
                   )}
-                </div>
+                </Stack>
               </Stack>
             )}
           </Paper>
@@ -1034,17 +1073,20 @@ const Procedures = () => {
                   ) : null}
 
                   {(Array.isArray(form.sections) ? form.sections : []).map((it) => (
-                    <div key={it.id} className="rounded-md border border-gray-200 p-3">
+                    <Paper key={it.id} variant="outlined" sx={{ p: 2 }}>
                       {it.type === 'field' ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input
-                              value={it.label}
-                              onChange={(e) => updateBuilderItem(it.id, { label: e.target.value })}
-                              placeholder="Field Name"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                            />
-                            <div className="relative">
+                        <Stack spacing={2}>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                size="small"
+                                value={it.label}
+                                onChange={(e) => updateBuilderItem(it.id, { label: e.target.value })}
+                                placeholder="Field Name"
+                                fullWidth
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={6} sx={{ position: 'relative' }}>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1073,11 +1115,19 @@ const Procedures = () => {
                                   <div className="px-2 py-2 border-b border-gray-700">
                                     <div className="relative">
                                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                      <input
+                                      <TextField
+                                        size="small"
                                         value={typeSearch}
                                         onChange={(e) => setTypeSearch(e.target.value)}
                                         placeholder="Search"
-                                        className="w-full pl-8 pr-2 py-2 text-sm border border-gray-700 rounded-md bg-gray-900 text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                                        fullWidth
+                                        InputProps={{
+                                          startAdornment: (
+                                            <InputAdornment position="start">
+                                              <Search size={16} />
+                                            </InputAdornment>
+                                          ),
+                                        }}
                                       />
                                     </div>
                                   </div>
@@ -1105,179 +1155,165 @@ const Procedures = () => {
                                   </div>
                                 </div>
                               )}
-                            </div>
-                          </div>
+                            </Grid>
+                          </Grid>
 
                           {it.field_type === 'text' && (
-                            <div>
-                              <textarea
-                                rows={3}
-                                value={it.value ?? ''}
-                                onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
-                                placeholder="Text will be entered here"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm"
-                              />
-                            </div>
+                            <TextField
+                              value={it.value ?? ''}
+                              onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
+                              placeholder="Text will be entered here"
+                              fullWidth
+                              multiline
+                              minRows={3}
+                              size="small"
+                            />
                           )}
 
                           {it.field_type === 'number' && (
-                            <div>
-                              <input
-                                type="number"
-                                value={it.value ?? ''}
-                                onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
-                                placeholder="Number will be entered here"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm"
-                              />
-                            </div>
+                            <TextField
+                              type="number"
+                              value={it.value ?? ''}
+                              onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
+                              placeholder="Number will be entered here"
+                              fullWidth
+                              size="small"
+                            />
                           )}
 
                           {it.field_type === 'amount' && (
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm text-gray-700">$</div>
-                              <input
-                                type="number"
-                                value={it.value ?? ''}
-                                onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
-                                placeholder="Amount will be entered here"
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-md text-sm"
-                              />
-                            </div>
+                            <TextField
+                              type="number"
+                              value={it.value ?? ''}
+                              onChange={(e) => updateBuilderItem(it.id, { value: e.target.value })}
+                              placeholder="Amount will be entered here"
+                              fullWidth
+                              size="small"
+                              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                            />
                           )}
 
                           {it.field_type === 'checkbox' && (
-                            <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox" className="rounded border-gray-300" />
-                                {it.label?.trim() ? it.label : 'Checkbox'}
-                              </label>
-                              <button
-                                type="button"
-                                onClick={addCheckboxItem}
-                                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                              >
-                                + Add Checkbox
-                              </button>
-                            </div>
+                            <Stack spacing={1}>
+                              <FormControlLabel
+                                control={<Checkbox size="small" />}
+                                label={it.label?.trim() ? it.label : 'Checkbox'}
+                              />
+                              <Button type="button" variant="text" onClick={addCheckboxItem}>
+                                Add Checkbox
+                              </Button>
+                            </Stack>
                           )}
 
                           {(it.field_type === 'multiple_choice' || it.field_type === 'checklist') && (
-                            <div className="space-y-2">
+                            <Stack spacing={1}>
                               {(Array.isArray(it.options) ? it.options : []).map((opt, idx) => (
-                                <div key={`${it.id}-opt-${idx}`} className="flex items-center gap-2">
-                                  <input
+                                <Stack key={`${it.id}-opt-${idx}`} direction="row" spacing={1} alignItems="center">
+                                  <TextField
+                                    size="small"
                                     value={opt}
                                     onChange={(e) => updateOption(it.id, idx, e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-primary-500 focus:border-primary-500"
                                     placeholder={`Option ${idx + 1}`}
+                                    fullWidth
                                   />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeOption(it.id, idx)}
-                                    className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50"
-                                    aria-label="Remove option"
-                                  >
-                                    <X className="h-4 w-4 text-gray-600" />
-                                  </button>
-                                </div>
+                                  <IconButton type="button" onClick={() => removeOption(it.id, idx)} size="small" aria-label="Remove option">
+                                    <X size={18} />
+                                  </IconButton>
+                                </Stack>
                               ))}
-                              <button
-                                type="button"
-                                onClick={() => addOption(it.id)}
-                                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                              >
-                                + Add Option
-                              </button>
-                            </div>
+                              <Button type="button" variant="text" onClick={() => addOption(it.id)}>
+                                Add Option
+                              </Button>
+                            </Stack>
                           )}
 
                           {it.field_type === 'inspection_check' && (
-                            <div className="grid grid-cols-3 gap-3">
-                              <button
-                                type="button"
-                                onClick={() => updateBuilderItem(it.id, { value: 'pass' })}
-                                className={`px-3 py-2 rounded-md border text-sm ${it.value === 'pass' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-green-600 hover:bg-gray-50'}`}
-                              >
-                                Pass
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateBuilderItem(it.id, { value: 'flag' })}
-                                className={`px-3 py-2 rounded-md border text-sm ${it.value === 'flag' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-orange-600 hover:bg-gray-50'}`}
-                              >
-                                Flag
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateBuilderItem(it.id, { value: 'fail' })}
-                                className={`px-3 py-2 rounded-md border text-sm ${it.value === 'fail' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-red-600 hover:bg-gray-50'}`}
-                              >
-                                Fail
-                              </button>
-                            </div>
+                            <Grid container spacing={1.5}>
+                              <Grid item xs={12} sm={4}>
+                                <Button
+                                  fullWidth
+                                  type="button"
+                                  variant={it.value === 'pass' ? 'contained' : 'outlined'}
+                                  color="success"
+                                  onClick={() => updateBuilderItem(it.id, { value: 'pass' })}
+                                >
+                                  Pass
+                                </Button>
+                              </Grid>
+                              <Grid item xs={12} sm={4}>
+                                <Button
+                                  fullWidth
+                                  type="button"
+                                  variant={it.value === 'flag' ? 'contained' : 'outlined'}
+                                  color="warning"
+                                  onClick={() => updateBuilderItem(it.id, { value: 'flag' })}
+                                >
+                                  Flag
+                                </Button>
+                              </Grid>
+                              <Grid item xs={12} sm={4}>
+                                <Button
+                                  fullWidth
+                                  type="button"
+                                  variant={it.value === 'fail' ? 'contained' : 'outlined'}
+                                  color="error"
+                                  onClick={() => updateBuilderItem(it.id, { value: 'fail' })}
+                                >
+                                  Fail
+                                </Button>
+                              </Grid>
+                            </Grid>
                           )}
 
-                          <div className="flex items-center justify-between">
-                            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(it.required)}
-                                onChange={(e) => updateBuilderItem(it.id, { required: e.target.checked })}
-                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                              />
-                              Required
-                            </label>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                            <FormControlLabel
+                              control={(
+                                <Checkbox
+                                  size="small"
+                                  checked={Boolean(it.required)}
+                                  onChange={(e) => updateBuilderItem(it.id, { required: e.target.checked })}
+                                />
+                              )}
+                              label="Required"
+                            />
 
-                            <button
-                              type="button"
-                              onClick={() => removeBuilderItem(it.id)}
-                              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-                            >
-                              <Trash2 className="h-4 w-4" />
+                            <Button type="button" variant="text" color="inherit" onClick={() => removeBuilderItem(it.id)} startIcon={<Trash2 size={18} />}>
                               Remove
-                            </button>
-                          </div>
-                        </div>
+                            </Button>
+                          </Stack>
+                        </Stack>
                       ) : null}
 
                       {it.type === 'heading' ? (
-                        <div className="flex items-center gap-3">
-                          <input
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                          <TextField
+                            size="small"
                             value={it.text}
                             onChange={(e) => updateBuilderItem(it.id, { text: e.target.value })}
                             placeholder="Heading"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                            fullWidth
                           />
-                          <button
-                            type="button"
-                            onClick={() => removeBuilderItem(it.id)}
-                            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
+                          <Button type="button" variant="text" color="inherit" onClick={() => removeBuilderItem(it.id)} startIcon={<Trash2 size={18} />}>
                             Remove
-                          </button>
-                        </div>
+                          </Button>
+                        </Stack>
                       ) : null}
 
                       {it.type === 'section' ? (
-                        <div className="flex items-center gap-3">
-                          <input
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                          <TextField
+                            size="small"
                             value={it.title}
                             onChange={(e) => updateBuilderItem(it.id, { title: e.target.value })}
                             placeholder="Section Title"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                            fullWidth
                           />
-                          <button
-                            type="button"
-                            onClick={() => removeBuilderItem(it.id)}
-                            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
+                          <Button type="button" variant="text" color="inherit" onClick={() => removeBuilderItem(it.id)} startIcon={<Trash2 size={18} />}>
                             Remove
-                          </button>
-                        </div>
+                          </Button>
+                        </Stack>
                       ) : null}
-                    </div>
+                    </Paper>
                   ))}
                 </Stack>
               </Paper>
