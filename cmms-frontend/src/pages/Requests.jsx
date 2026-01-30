@@ -1,7 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Search, ChevronDown, SlidersHorizontal, Upload, X, ArrowRight } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Upload, X, ArrowRight } from 'lucide-react';
 import { Button, Badge, Modal } from '../components';
+import {
+  Box,
+  Chip,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  Button as MuiButton,
+} from '@mui/material';
 import useStore from '../store/useStore';
 
 const Requests = () => {
@@ -247,344 +268,344 @@ const Requests = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <Stack spacing={2}>
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900">Requests</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search Requests"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-72 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
-            />
-          </div>
-          <Button onClick={() => { resetCreateForm(); setShowCreateModal(true); }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Request
-          </Button>
-        </div>
-      </div>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>Requests</Typography>
+        </Box>
 
-      {/* Mobile search */}
-      <div className="md:hidden">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <TextField
+            size="small"
             placeholder="Search Requests"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
+            sx={{ display: { xs: 'none', md: 'block' }, width: 320 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
           />
-        </div>
-      </div>
+          <Button onClick={() => { resetCreateForm(); setShowCreateModal(true); }}>
+            <Plus size={16} style={{ marginRight: 8 }} />
+            New Request
+          </Button>
+        </Stack>
+      </Stack>
+
+      {/* Mobile search */}
+      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+        <TextField
+          size="small"
+          placeholder="Search Requests"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          fullWidth
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search size={18} />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
 
       {/* Filter chips + Tabs */}
-      <div className="bg-white border border-gray-200 rounded-lg">
-        <div className="px-4 py-3 flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-md text-sm text-gray-700 bg-white">
-              <SlidersHorizontal className="h-4 w-4 text-gray-400" />
-              <span className="text-xs font-medium">Filters</span>
-            </div>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            <Chip size="small" icon={<SlidersHorizontal size={16} />} label="Filters" variant="outlined" sx={{ fontWeight: 700 }} />
 
-            <div className="relative">
-              <select
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <Select
                 value={filters.asset}
+                displayEmpty
                 onChange={(e) => setFilters({ ...filters, asset: e.target.value })}
-                className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Asset</option>
+                <MenuItem value="">Asset</MenuItem>
                 {assets.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
+                  <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
                 ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+              </Select>
+            </FormControl>
 
-            <div className="relative">
-              <select
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select
                 value={filters.priority}
+                displayEmpty
                 onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-                className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Priority</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+                <MenuItem value="">Priority</MenuItem>
+                <MenuItem value="low">Low</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="critical">Critical</MenuItem>
+              </Select>
+            </FormControl>
 
-            <div className="relative">
-              <select
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <Select
                 value={filters.status}
+                displayEmpty
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Status</option>
-                <option value="open">Open</option>
-                <option value="in_review">In Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="converted">Converted</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+                <MenuItem value="">Status</MenuItem>
+                <MenuItem value="open">Open</MenuItem>
+                <MenuItem value="in_review">In Review</MenuItem>
+                <MenuItem value="approved">Approved</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="converted">Converted</MenuItem>
+              </Select>
+            </FormControl>
 
-            <button
+            <MuiButton
               type="button"
+              variant="text"
+              color="inherit"
               onClick={() => setFilters({ status: '', priority: '', asset: '' })}
-              className="px-3 py-1.5 border border-gray-200 rounded-md bg-white text-sm text-gray-600 hover:bg-gray-50"
             >
               Clear
-            </button>
-          </div>
+            </MuiButton>
+          </Stack>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => { setActiveTab('open'); setSelectedRequestId(null); }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'open' ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                Open
-              </button>
-              <button
-                type="button"
-                onClick={() => { setActiveTab('done'); setSelectedRequestId(null); }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'done' ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                Done
-              </button>
-            </div>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={activeTab}
+              onChange={(_e, v) => {
+                if (!v) return;
+                setActiveTab(v);
+                setSelectedRequestId(null);
+              }}
+            >
+              <ToggleButton value="open">Open</ToggleButton>
+              <ToggleButton value="done">Done</ToggleButton>
+            </ToggleButtonGroup>
 
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="created_desc">Sort: Newest</option>
-                <option value="created_asc">Sort: Oldest</option>
-                <option value="priority_desc">Sort: Priority (High - Low)</option>
-                <option value="priority_asc">Sort: Priority (Low - High)</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-        </div>
-      </div>
+            <FormControl size="small" sx={{ minWidth: 240 }}>
+              <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <MenuItem value="created_desc">Sort: Newest</MenuItem>
+                <MenuItem value="created_asc">Sort: Oldest</MenuItem>
+                <MenuItem value="priority_desc">Sort: Priority (High - Low)</MenuItem>
+                <MenuItem value="priority_asc">Sort: Priority (Low - High)</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </Stack>
+      </Paper>
 
       {/* Split view */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left list */}
-        <div className="lg:col-span-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <div className="text-sm font-semibold text-gray-900">
-              {activeTab === 'done' ? 'Done' : 'Open'} ({filteredRequests.length})
-            </div>
-          </div>
+      <Grid container spacing={2}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                {activeTab === 'done' ? 'Done' : 'Open'} ({filteredRequests.length})
+              </Typography>
+            </Box>
+            <Divider />
 
-          <div className="max-h-[65vh] overflow-y-auto">
-            {filteredRequests.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-gray-900">You don't have any requests</p>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(true)}
-                  className="mt-2 text-sm text-primary-600 hover:text-primary-700"
-                >
-                  Create the first request
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {filteredRequests.map((r) => {
-                  const isSelected = r.id === selectedRequestId;
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setSelectedRequestId(r.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 ${isSelected ? 'bg-primary-50' : 'bg-white'}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 truncate">
-                            {r.title || 'Request'}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-500 truncate">
-                            {r.id} - {r.assetId ? getAssetName(r.assetId) : 'No asset'} - {r.locationId ? getLocationName(r.locationId) : 'No location'}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-500 truncate">
-                            Requested by {r.requesterId ? getRequesterName(r.requesterId) : 'Unknown'}
-                          </div>
-                        </div>
-                        <div className="shrink-0 flex flex-col items-end gap-1">
-                          {getPriorityBadge(r.priority)}
-                          <div className="text-xs text-gray-500">
-                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right detail */}
-        <div className="lg:col-span-8 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {!selectedRequest ? (
-            <div className="h-full min-h-[65vh] flex items-center justify-center p-8 text-center">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Select a request</p>
-                <p className="mt-1 text-sm text-gray-500">Details will appear here.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 space-y-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-xs text-gray-500">{selectedRequest.id}</div>
-                  <h2 className="text-xl font-bold text-gray-900 mt-1">{selectedRequest.title || 'Request'}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {getStatusBadge(selectedRequest.status)}
-                    {getPriorityBadge(selectedRequest.priority)}
-                  </div>
-                </div>
-
-                <div className="shrink-0 flex flex-wrap items-center gap-2 justify-end">
-                  {selectedRequest.status !== 'converted' && !isDoneStatus(selectedRequest.status) && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => updateRequest(selectedRequest.id, { status: 'in_review' })}
-                    >
-                      In Review
-                    </Button>
-                  )}
-
-                  {selectedRequest.status !== 'converted' && !isDoneStatus(selectedRequest.status) && (
-                    <Button
-                      onClick={() => updateRequest(selectedRequest.id, { status: 'approved' })}
-                    >
-                      Approve
-                    </Button>
-                  )}
-
-                  {selectedRequest.status === 'approved' && (
-                    <Button
-                      variant="success"
-                      onClick={() => handleConvert(selectedRequest.id)}
-                    >
-                      <ArrowRight className="w-4 h-4 mr-2" />
-                      Convert to Work Order
-                    </Button>
-                  )}
-
-                  {selectedRequest.status !== 'converted' && selectedRequest.status !== 'completed' && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => updateRequest(selectedRequest.id, { status: 'completed' })}
-                    >
-                      Mark Completed
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="danger"
-                    onClick={() => {
-                      deleteRequest(selectedRequest.id);
-                      setSelectedRequestId(null);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Asset</div>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {selectedRequest.assetId ? getAssetName(selectedRequest.assetId) : 'Not set'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Location</div>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {selectedRequest.locationId ? getLocationName(selectedRequest.locationId) : 'Not set'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Requester</div>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {selectedRequest.requesterId ? getRequesterName(selectedRequest.requesterId) : 'Unknown'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Created</div>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleString() : 'Unknown'}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs font-medium text-gray-500">Description</div>
-                <div className="text-sm text-gray-900 mt-1">
-                  {selectedRequest.description || 'No description'}
-                </div>
-              </div>
-
-              {selectedRequest.convertedWorkOrderId && (
-                <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                  <div className="text-xs font-medium text-gray-500">Converted Work Order</div>
-                  <div className="text-sm text-gray-900 mt-1">{selectedRequest.convertedWorkOrderId}</div>
-                </div>
-              )}
-
-              {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Files</div>
-                  <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {selectedRequest.attachments.map((a) => {
-                      const isImage = typeof a?.type === 'string' && a.type.startsWith('image/');
-                      return (
-                        <div key={a.id} className="border border-gray-200 rounded-md overflow-hidden bg-white">
-                          {isImage ? (
-                            <img src={a.dataUrl} alt={a.name} className="h-24 w-full object-cover" />
-                          ) : (
-                            <div className="h-24 w-full flex items-center justify-center text-xs text-gray-600 px-2 text-center">
-                              {a.name}
-                            </div>
+            <Box sx={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              {filteredRequests.length === 0 ? (
+                <Stack spacing={1} alignItems="center" sx={{ p: 3, textAlign: 'center' }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: '999px', bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Plus size={18} />
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    You don't have any requests
+                  </Typography>
+                  <MuiButton type="button" variant="text" onClick={() => setShowCreateModal(true)}>
+                    Create the first request
+                  </MuiButton>
+                </Stack>
+              ) : (
+                <List disablePadding>
+                  {filteredRequests.map((r) => {
+                    const isSelected = r.id === selectedRequestId;
+                    return (
+                      <ListItemButton
+                        key={r.id}
+                        selected={isSelected}
+                        onClick={() => setSelectedRequestId(r.id)}
+                        sx={{ alignItems: 'flex-start' }}
+                      >
+                        <ListItemText
+                          primary={(
+                            <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+                              <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
+                                  {r.title || 'Request'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {r.id} - {r.assetId ? getAssetName(r.assetId) : 'No asset'} - {r.locationId ? getLocationName(r.locationId) : 'No location'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  Requested by {r.requesterId ? getRequesterName(r.requesterId) : 'Unknown'}
+                                </Typography>
+                              </Box>
+                              <Stack alignItems="flex-end" spacing={0.5} sx={{ flexShrink: 0 }}>
+                                {getPriorityBadge(r.priority)}
+                                <Typography variant="caption" color="text.secondary">
+                                  {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
+                                </Typography>
+                              </Stack>
+                            </Stack>
                           )}
-                          <div className="px-2 py-1 text-xs text-gray-700 truncate" title={a.name}>{a.name}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
               )}
-            </div>
-          )}
-        </div>
-      </div>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} lg={8}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden', minHeight: '65vh' }}>
+            {!selectedRequest ? (
+              <Stack spacing={0.5} alignItems="center" justifyContent="center" sx={{ minHeight: '65vh', p: 3, textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>Select a request</Typography>
+                <Typography variant="body2" color="text.secondary">Details will appear here.</Typography>
+              </Stack>
+            ) : (
+              <Stack spacing={3} sx={{ p: 3 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ md: 'flex-start' }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary">{selectedRequest.id}</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 900, mt: 0.5 }}>
+                      {selectedRequest.title || 'Request'}
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                      {getStatusBadge(selectedRequest.status)}
+                      {getPriorityBadge(selectedRequest.priority)}
+                    </Stack>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                    {selectedRequest.status !== 'converted' && !isDoneStatus(selectedRequest.status) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => updateRequest(selectedRequest.id, { status: 'in_review' })}
+                      >
+                        In Review
+                      </Button>
+                    )}
+
+                    {selectedRequest.status !== 'converted' && !isDoneStatus(selectedRequest.status) && (
+                      <Button onClick={() => updateRequest(selectedRequest.id, { status: 'approved' })}>
+                        Approve
+                      </Button>
+                    )}
+
+                    {selectedRequest.status === 'approved' && (
+                      <Button variant="success" onClick={() => handleConvert(selectedRequest.id)}>
+                        <ArrowRight size={16} style={{ marginRight: 8 }} />
+                        Convert to Work Order
+                      </Button>
+                    )}
+
+                    {selectedRequest.status !== 'converted' && selectedRequest.status !== 'completed' && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => updateRequest(selectedRequest.id, { status: 'completed' })}
+                      >
+                        Mark Completed
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="danger"
+                      onClick={() => {
+                        deleteRequest(selectedRequest.id);
+                        setSelectedRequestId(null);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </Stack>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Asset</Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedRequest.assetId ? getAssetName(selectedRequest.assetId) : 'Not set'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Location</Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedRequest.locationId ? getLocationName(selectedRequest.locationId) : 'Not set'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Requester</Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedRequest.requesterId ? getRequesterName(selectedRequest.requesterId) : 'Unknown'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Created</Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleString() : 'Unknown'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Description</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {selectedRequest.description || 'No description'}
+                  </Typography>
+                </Box>
+
+                {selectedRequest.convertedWorkOrderId && (
+                  <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Converted Work Order</Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>{selectedRequest.convertedWorkOrderId}</Typography>
+                  </Paper>
+                )}
+
+                {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>Files</Typography>
+                    <Grid container spacing={1.5} sx={{ mt: 1 }}>
+                      {selectedRequest.attachments.map((a) => {
+                        const isImage = typeof a?.type === 'string' && a.type.startsWith('image/');
+                        return (
+                          <Grid item xs={6} md={4} key={a.id}>
+                            <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                              {isImage ? (
+                                <Box component="img" src={a.dataUrl} alt={a.name} sx={{ width: '100%', height: 96, objectFit: 'cover', display: 'block' }} />
+                              ) : (
+                                <Stack alignItems="center" justifyContent="center" sx={{ height: 96, px: 2, textAlign: 'center' }}>
+                                  <Typography variant="caption" color="text.secondary">{a.name}</Typography>
+                                </Stack>
+                              )}
+                              <Box sx={{ px: 1, py: 0.75 }}>
+                                <Typography variant="caption" noWrap title={a.name}>{a.name}</Typography>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
+                  </Box>
+                )}
+              </Stack>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
 
       {/* Create Request Modal */}
       <Modal
@@ -593,35 +614,33 @@ const Requests = () => {
         title="New Request"
         size="xl"
       >
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              What do you need? (Required)
-            </label>
-            <textarea
-              rows={2}
-              value={createForm.title}
-              onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Describe the request"
-            />
-          </div>
+        <Stack spacing={3}>
+          <TextField
+            label="What do you need? (Required)"
+            value={createForm.title}
+            onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
+            placeholder="Describe the request"
+            fullWidth
+            multiline
+            minRows={2}
+          />
 
-          <div>
-            <input
+          <Box>
+            <Box
+              component="input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
               multiple
-              className="hidden"
+              sx={{ display: 'none' }}
               onChange={(e) => {
                 addAttachments(e.target.files);
                 e.target.value = '';
               }}
             />
 
-            <div
-              className={`w-full rounded-md border-2 border-dashed p-6 transition-colors ${isDraggingFiles ? 'border-primary-500 bg-primary-50' : 'border-gray-300 bg-gray-50'}`}
+            <Paper
+              variant="outlined"
               onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingFiles(true); }}
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingFiles(true); }}
               onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingFiles(false); }}
@@ -631,122 +650,117 @@ const Requests = () => {
                 setIsDraggingFiles(false);
                 addAttachments(e.dataTransfer.files);
               }}
+              sx={{
+                p: 3,
+                borderStyle: 'dashed',
+                borderWidth: 2,
+                borderColor: isDraggingFiles ? 'primary.main' : 'divider',
+                bgcolor: isDraggingFiles ? 'action.hover' : 'background.default',
+                cursor: 'pointer',
+              }}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <div className="flex flex-col items-center text-center gap-2">
-                <div className="h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                  <Upload className="h-5 w-5 text-gray-500" />
-                </div>
-                <button
-                  type="button"
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+              <Stack spacing={1} alignItems="center" textAlign="center">
+                <Box sx={{ width: 40, height: 40, borderRadius: '999px', bgcolor: 'background.paper', border: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Upload size={18} />
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
                   Add or drag pictures
-                </button>
-                <div className="text-xs text-gray-500">PNG, JPG, GIF</div>
-              </div>
-            </div>
+                </Typography>
+                <Typography variant="caption" color="text.secondary">PNG, JPG, GIF</Typography>
+              </Stack>
+            </Paper>
 
             {createForm.attachments && createForm.attachments.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Grid container spacing={1.5} sx={{ mt: 1.5 }}>
                 {createForm.attachments.map((a) => (
-                  <div key={a.id} className="relative border border-gray-200 rounded-md overflow-hidden bg-white">
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(a.id)}
-                      className="absolute top-1 right-1 h-7 w-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center hover:bg-white"
-                      aria-label="Remove"
-                      title="Remove"
-                    >
-                      <X className="h-4 w-4 text-gray-600" />
-                    </button>
-                    <img src={a.dataUrl} alt={a.name} className="h-24 w-full object-cover" />
-                    <div className="px-2 py-1 text-xs text-gray-700 truncate" title={a.name}>{a.name}</div>
-                  </div>
+                  <Grid item xs={6} md={3} key={a.id}>
+                    <Paper variant="outlined" sx={{ position: 'relative', overflow: 'hidden' }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeAttachment(a.id);
+                        }}
+                        aria-label="Remove"
+                        title="Remove"
+                        sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}
+                      >
+                        <X size={16} />
+                      </IconButton>
+                      <Box component="img" src={a.dataUrl} alt={a.name} sx={{ width: '100%', height: 96, objectFit: 'cover', display: 'block' }} />
+                      <Box sx={{ px: 1, py: 0.75 }}>
+                        <Typography variant="caption" noWrap title={a.name}>{a.name}</Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
                 ))}
-              </div>
+              </Grid>
             )}
-          </div>
+          </Box>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={4}
-              value={createForm.description}
-              onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Add a description"
-            />
-          </div>
+          <TextField
+            label="Description"
+            value={createForm.description}
+            onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
+            placeholder="Add a description"
+            fullWidth
+            multiline
+            minRows={4}
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Location
-              </label>
-              <input
-                type="text"
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Location"
                 value={createForm.locationName}
                 onChange={(e) => setCreateForm((p) => ({ ...p, locationName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Start typing..."
+                fullWidth
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Asset
-              </label>
-              <input
-                type="text"
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Asset"
                 value={createForm.assetName}
                 onChange={(e) => setCreateForm((p) => ({ ...p, assetName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Start typing..."
+                fullWidth
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Requested by
-              </label>
-              <input
-                type="text"
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Requested by"
                 value={createForm.requester}
                 onChange={(e) => setCreateForm((p) => ({ ...p, requester: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Type name or email address"
+                fullWidth
               />
-            </div>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={createForm.priority}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, priority: e.target.value }))}
+                >
+                  <MenuItem value="low">Low</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="high">High</MenuItem>
+                  <MenuItem value="critical">Critical</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <select
-                value={createForm.priority}
-                onChange={(e) => setCreateForm((p) => ({ ...p, priority: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
+          <Stack direction="row" justifyContent="flex-end" spacing={1.5}>
             <Button variant="secondary" onClick={() => { setShowCreateModal(false); resetCreateForm(); }}>
               Cancel
             </Button>
             <Button onClick={handleCreate}>Create Request</Button>
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       </Modal>
-    </div>
+    </Stack>
   );
 };
 

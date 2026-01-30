@@ -25,15 +25,15 @@ import useStore from '../store/useStore';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
-const iconClasses = [
-  'bg-orange-50 text-orange-600 border-orange-200',
-  'bg-yellow-50 text-yellow-700 border-yellow-200',
-  'bg-indigo-50 text-indigo-700 border-indigo-200',
-  'bg-purple-50 text-purple-700 border-purple-200',
-  'bg-green-50 text-green-700 border-green-200',
-  'bg-rose-50 text-rose-700 border-rose-200',
-  'bg-cyan-50 text-cyan-700 border-cyan-200',
-  'bg-teal-50 text-teal-700 border-teal-200',
+const iconColors = [
+  { bg: 'warning.light', fg: 'warning.dark', border: 'warning.light' },
+  { bg: 'warning.light', fg: 'warning.dark', border: 'warning.light' },
+  { bg: 'primary.light', fg: 'primary.dark', border: 'primary.light' },
+  { bg: 'secondary.light', fg: 'secondary.dark', border: 'secondary.light' },
+  { bg: 'success.light', fg: 'success.dark', border: 'success.light' },
+  { bg: 'error.light', fg: 'error.dark', border: 'error.light' },
+  { bg: 'info.light', fg: 'info.dark', border: 'info.light' },
+  { bg: 'success.light', fg: 'success.dark', border: 'success.light' },
 ];
 
 const formatDateTime = (iso) => {
@@ -165,14 +165,13 @@ const Categories = () => {
             <List disablePadding>
               {filtered.map((c, idx) => {
                 const active = c.id === (selected?.id || '');
-                const cls = iconClasses[idx % iconClasses.length];
+                const clr = iconColors[idx % iconColors.length];
 
                 return (
                   <React.Fragment key={c.id}>
                     <ListItemButton selected={active} onClick={() => setSelectedId(c.id)}>
                       <ListItemIcon>
                         <Box
-                          className={`h-9 w-9 rounded-full border flex items-center justify-center ${cls}`}
                           sx={{
                             display: 'flex',
                             alignItems: 'center',
@@ -180,6 +179,10 @@ const Categories = () => {
                             borderRadius: '999px',
                             width: 36,
                             height: 36,
+                            bgcolor: clr.bg,
+                            color: clr.fg,
+                            border: '1px solid',
+                            borderColor: clr.border,
                           }}
                         >
                           <Tag size={16} />

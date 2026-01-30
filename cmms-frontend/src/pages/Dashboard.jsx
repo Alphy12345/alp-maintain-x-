@@ -21,6 +21,7 @@ import {
   Activity
 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components';
+import { Box, Grid, Stack, Typography } from '@mui/material';
 import useStore from '../store/useStore';
 
 const Dashboard = () => {
@@ -61,21 +62,43 @@ const Dashboard = () => {
   const KPICard = ({ title, value, icon: Icon, color, change }) => (
     <motion.div variants={itemVariants}>
       <Card hover>
-        <CardBody className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">{title}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-              {change && (
-                <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {change >= 0 ? '+' : ''}{change}% from last month
-                </p>
-              )}
-            </div>
-            <div className={`p-3 rounded-full ${color}`}>
-              <Icon className="w-6 h-6 text-white" />
-            </div>
-          </div>
+        <CardBody>
+          <Box sx={{ p: 3 }}>
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                  {title}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
+                  {value}
+                </Typography>
+                {change !== undefined && change !== null ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 0.5,
+                      fontWeight: 700,
+                      color: change >= 0 ? 'success.main' : 'error.main',
+                    }}
+                  >
+                    {change >= 0 ? '+' : ''}{change}% from last month
+                  </Typography>
+                ) : null}
+              </Box>
+
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: '999px',
+                  bgcolor: color,
+                  color: 'common.white',
+                  display: 'flex',
+                }}
+              >
+                <Icon size={22} />
+              </Box>
+            </Stack>
+          </Box>
         </CardBody>
       </Card>
     </motion.div>
@@ -86,152 +109,171 @@ const Dashboard = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
     >
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your maintenance operations.</p>
-      </div>
+      <Stack spacing={3}>
+        {/* Page Header */}
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>Dashboard</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Welcome back! Here's what's happening with your maintenance operations.
+          </Typography>
+        </Box>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard
-          title="Open Work Orders"
-          value={dashboardKPI.openWorkOrders}
-          icon={Wrench}
-          color="bg-blue-500"
-          change={12}
-        />
-        <KPICard
-          title="Overdue Work Orders"
-          value={dashboardKPI.overdueWorkOrders}
-          icon={AlertTriangle}
-          color="bg-red-500"
-          change={-5}
-        />
-        <KPICard
-          title="Assets Down"
-          value={dashboardKPI.assetsDown}
-          icon={Power}
-          color="bg-orange-500"
-          change={0}
-        />
-        <KPICard
-          title="PM Compliance"
-          value={`${dashboardKPI.pmCompliance}%`}
-          icon={CheckCircle}
-          color="bg-green-500"
-          change={3}
-        />
-      </div>
+        {/* KPI Cards */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6} lg={3}>
+            <KPICard
+              title="Open Work Orders"
+              value={dashboardKPI.openWorkOrders}
+              icon={Wrench}
+              color="info.main"
+              change={12}
+            />
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <KPICard
+              title="Overdue Work Orders"
+              value={dashboardKPI.overdueWorkOrders}
+              icon={AlertTriangle}
+              color="error.main"
+              change={-5}
+            />
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <KPICard
+              title="Assets Down"
+              value={dashboardKPI.assetsDown}
+              icon={Power}
+              color="warning.main"
+              change={0}
+            />
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <KPICard
+              title="PM Compliance"
+              value={`${dashboardKPI.pmCompliance}%`}
+              icon={CheckCircle}
+              color="success.main"
+              change={3}
+            />
+          </Grid>
+        </Grid>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Work Orders by Status */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Work Orders by Status</h3>
-            </CardHeader>
-            <CardBody>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData.workOrdersByStatus}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="status" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardBody>
-          </Card>
-        </motion.div>
+        {/* Charts Row */}
+        <Grid container spacing={2}>
+          {/* Work Orders by Status */}
+          <Grid item xs={12} lg={6}>
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>Work Orders by Status</Typography>
+                </CardHeader>
+                <CardBody>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData.workOrdersByStatus}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="status" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardBody>
+              </Card>
+            </motion.div>
+          </Grid>
 
-        {/* Downtime Trend */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Downtime Trend (Hours)</h3>
-            </CardHeader>
-            <CardBody>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData.downtimeTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="downtime" stroke="#ef4444" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardBody>
-          </Card>
-        </motion.div>
-      </div>
+          {/* Downtime Trend */}
+          <Grid item xs={12} lg={6}>
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>Downtime Trend (Hours)</Typography>
+                </CardHeader>
+                <CardBody>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData.downtimeTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="downtime" stroke="#ef4444" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardBody>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <motion.div variants={itemVariants} className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-                <Activity className="w-5 h-5 text-gray-400" />
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                {activities.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">{activity.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
+        {/* Bottom Row */}
+        <Grid container spacing={2}>
+          {/* Recent Activity */}
+          <Grid item xs={12} lg={8}>
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>Recent Activity</Typography>
+                    <Activity size={18} />
+                  </Stack>
+                </CardHeader>
+                <CardBody>
+                  <Stack spacing={2}>
+                    {activities.slice(0, 5).map((activity) => (
+                      <Stack key={activity.id} direction="row" spacing={1.5} alignItems="flex-start">
+                        <Box sx={{ pt: 1 }}>
+                          <Box sx={{ width: 8, height: 8, borderRadius: '999px', bgcolor: 'primary.main' }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2">{activity.description}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                            {new Date(activity.timestamp).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </CardBody>
+              </Card>
+            </motion.div>
+          </Grid>
 
-        {/* Upcoming PM */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Upcoming PM</h3>
-                <Calendar className="w-5 h-5 text-gray-400" />
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-3">
-                {upcomingPM.slice(0, 4).map((pm) => {
-                  const asset = assets.find(a => a.id === pm.assetId);
-                  return (
-                    <div key={pm.id} className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {asset?.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Due: {new Date(pm.nextDue).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    </div>
-                  );
-                })}
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-      </div>
+          {/* Upcoming PM */}
+          <Grid item xs={12} lg={4}>
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>Upcoming PM</Typography>
+                    <Calendar size={18} />
+                  </Stack>
+                </CardHeader>
+                <CardBody>
+                  <Stack spacing={1.5}>
+                    {upcomingPM.slice(0, 4).map((pm) => {
+                      const asset = assets.find(a => a.id === pm.assetId);
+                      return (
+                        <Stack key={pm.id} direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
+                              {asset?.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Due: {new Date(pm.nextDue).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Clock size={16} />
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </CardBody>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
+      </Stack>
     </motion.div>
   );
 };

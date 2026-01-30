@@ -1,7 +1,22 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Filter, Search, Calendar, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Calendar, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardBody, Button, Badge, Table, Modal } from '../components';
+import {
+  Box,
+  Chip,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import useStore from '../store/useStore';
 
 const PreventiveMaintenance = () => {
@@ -89,11 +104,11 @@ const PreventiveMaintenance = () => {
       render: (value) => {
         const status = getDueStatus(value);
         return (
-          <div className="flex items-center space-x-1">
-            {status.icon && <status.icon className="w-4 h-4" />}
-            <span>{new Date(value).toLocaleDateString()}</span>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {status.icon ? <status.icon size={16} /> : null}
+            <Typography variant="body2">{new Date(value).toLocaleDateString()}</Typography>
             <Badge variant={status.variant} size="sm">{status.label}</Badge>
-          </div>
+          </Stack>
         );
       },
       sortable: true
@@ -122,202 +137,237 @@ const PreventiveMaintenance = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Preventive Maintenance</h1>
-          <p className="text-gray-600 mt-1">Manage scheduled maintenance tasks</p>
-        </div>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>Preventive Maintenance</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Manage scheduled maintenance tasks
+          </Typography>
+        </Box>
         <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus size={16} style={{ marginRight: 8 }} />
           Create PM Schedule
         </Button>
-      </div>
+      </Stack>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card hover>
-          <CardBody className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total PM Schedules</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{pmSchedules.length}</p>
-              </div>
-              <div className="p-3 rounded-full bg-blue-500">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={3}>
+          <Card hover>
+            <CardBody>
+              <Box sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                      Total PM Schedules
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>{pmSchedules.length}</Typography>
+                  </Box>
+                  <Box sx={{ p: 1.5, borderRadius: '999px', bgcolor: 'info.main', color: 'common.white', display: 'flex' }}>
+                    <Calendar size={22} />
+                  </Box>
+                </Stack>
+              </Box>
+            </CardBody>
+          </Card>
+        </Grid>
 
-        <Card hover>
-          <CardBody className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Schedules</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {pmSchedules.filter(pm => pm.isActive).length}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-green-500">
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+        <Grid item xs={12} md={3}>
+          <Card hover>
+            <CardBody>
+              <Box sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                      Active Schedules
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5, color: 'success.main' }}>
+                      {pmSchedules.filter(pm => pm.isActive).length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1.5, borderRadius: '999px', bgcolor: 'success.main', color: 'common.white', display: 'flex' }}>
+                    <CheckCircle size={22} />
+                  </Box>
+                </Stack>
+              </Box>
+            </CardBody>
+          </Card>
+        </Grid>
 
-        <Card hover>
-          <CardBody className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Due This Week</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">
-                  {pmSchedules.filter(pm => {
-                    const now = new Date();
-                    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                    return pm.isActive && new Date(pm.nextDue) <= weekFromNow;
-                  }).length}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-orange-500">
-                <Clock className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+        <Grid item xs={12} md={3}>
+          <Card hover>
+            <CardBody>
+              <Box sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                      Due This Week
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5, color: 'warning.main' }}>
+                      {pmSchedules.filter(pm => {
+                        const now = new Date();
+                        const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        return pm.isActive && new Date(pm.nextDue) <= weekFromNow;
+                      }).length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1.5, borderRadius: '999px', bgcolor: 'warning.main', color: 'common.white', display: 'flex' }}>
+                    <Clock size={22} />
+                  </Box>
+                </Stack>
+              </Box>
+            </CardBody>
+          </Card>
+        </Grid>
 
-        <Card hover>
-          <CardBody className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Overdue</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">
-                  {pmSchedules.filter(pm => {
-                    return pm.isActive && new Date(pm.nextDue) < new Date();
-                  }).length}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-red-500">
-                <AlertTriangle className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
+        <Grid item xs={12} md={3}>
+          <Card hover>
+            <CardBody>
+              <Box sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                      Overdue
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5, color: 'error.main' }}>
+                      {pmSchedules.filter(pm => {
+                        return pm.isActive && new Date(pm.nextDue) < new Date();
+                      }).length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1.5, borderRadius: '999px', bgcolor: 'error.main', color: 'common.white', display: 'flex' }}>
+                    <AlertTriangle size={22} />
+                  </Box>
+                </Stack>
+              </Box>
+            </CardBody>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Calendar View */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">Upcoming PM Schedule</h3>
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>Upcoming PM Schedule</Typography>
         </CardHeader>
         <CardBody>
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          <Grid container spacing={1.5}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-medium text-gray-600 text-sm">
-                {day}
-              </div>
+              <Grid item xs={12} md={12 / 7} key={day}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textAlign: 'center', display: 'block' }}>
+                  {day}
+                </Typography>
+              </Grid>
             ))}
-            
+
             {Array.from({ length: 35 }, (_, i) => {
               const date = new Date();
               date.setDate(date.getDate() - date.getDay() + i);
-              const dateStr = date.toISOString().split('T')[0];
-              
-              const pmForDay = pmSchedules.filter(pm => 
+              const isCurrentMonth = date.getMonth() === new Date().getMonth();
+
+              const pmForDay = pmSchedules.filter(pm =>
                 pm.isActive && new Date(pm.nextDue).toDateString() === date.toDateString()
               );
-              
+
               return (
-                <div
-                  key={i}
-                  className={`
-                    border rounded-lg p-2 min-h-[80px] 
-                    ${date.getMonth() === new Date().getMonth() ? 'bg-white' : 'bg-gray-50'}
-                    ${pmForDay.length > 0 ? 'border-primary-200' : 'border-gray-200'}
-                  `}
-                >
-                  <div className="text-sm font-medium text-gray-900">
-                    {date.getDate()}
-                  </div>
-                  {pmForDay.map(pm => (
-                    <div
-                      key={pm.id}
-                      className="text-xs bg-primary-100 text-primary-800 rounded px-1 mt-1 truncate"
-                      title={pm.title}
-                    >
-                      {pm.title}
-                    </div>
-                  ))}
-                </div>
+                <Grid item xs={12} md={12 / 7} key={i}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1,
+                      minHeight: 80,
+                      bgcolor: isCurrentMonth ? 'background.paper' : 'action.hover',
+                      borderColor: pmForDay.length > 0 ? 'primary.light' : 'divider',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                      {date.getDate()}
+                    </Typography>
+                    <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                      {pmForDay.map(pm => (
+                        <Chip
+                          key={pm.id}
+                          label={pm.title}
+                          size="small"
+                          title={pm.title}
+                          sx={{
+                            justifyContent: 'flex-start',
+                            maxWidth: '100%',
+                            '& .MuiChip-label': { px: 1, overflow: 'hidden', textOverflow: 'ellipsis' },
+                          }}
+                        />
+                      ))}
+                    </Stack>
+                  </Paper>
+                </Grid>
               );
             })}
-          </div>
+          </Grid>
         </CardBody>
       </Card>
 
       {/* Filters and Search */}
       <Card>
         <CardBody>
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search PM schedules..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <select
-                value={filters.asset}
-                onChange={(e) => setFilters({ ...filters, asset: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Assets</option>
-                {assets.map(asset => (
-                  <option key={asset.id} value={asset.id}>{asset.name}</option>
-                ))}
-              </select>
+          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ lg: 'center' }}>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search PM schedules..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search size={18} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
 
-              <select
-                value={filters.frequency}
-                onChange={(e) => setFilters({ ...filters, frequency: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Frequencies</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-              </select>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select value={filters.asset} displayEmpty onChange={(e) => setFilters({ ...filters, asset: e.target.value })}>
+                  <MenuItem value="">All Assets</MenuItem>
+                  {assets.map(asset => (
+                    <MenuItem key={asset.id} value={asset.id}>{asset.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select value={filters.frequency} displayEmpty onChange={(e) => setFilters({ ...filters, frequency: e.target.value })}>
+                  <MenuItem value="">All Frequencies</MenuItem>
+                  <MenuItem value="daily">Daily</MenuItem>
+                  <MenuItem value="weekly">Weekly</MenuItem>
+                  <MenuItem value="monthly">Monthly</MenuItem>
+                  <MenuItem value="quarterly">Quarterly</MenuItem>
+                  <MenuItem value="yearly">Yearly</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <Select value={filters.status} displayEmpty onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+                  <MenuItem value="">All Status</MenuItem>
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+          </Stack>
         </CardBody>
       </Card>
 
       {/* PM Schedules Table */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>
             PM Schedules ({filteredPMSchedules.length})
-          </h3>
+          </Typography>
         </CardHeader>
         <CardBody>
           <Table
@@ -336,107 +386,81 @@ const PreventiveMaintenance = () => {
         title="Create PM Schedule"
         size="lg"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter PM schedule title"
-            />
-          </div>
+        <Stack spacing={2}>
+          <TextField
+            label="Title"
+            size="small"
+            placeholder="Enter PM schedule title"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Describe the PM schedule"
-            />
-          </div>
+          <TextField
+            label="Description"
+            size="small"
+            multiline
+            minRows={3}
+            placeholder="Describe the PM schedule"
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Asset
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
-                <option value="">Select Asset</option>
-                {assets.map(asset => (
-                  <option key={asset.id} value={asset.id}>{asset.name}</option>
-                ))}
-              </select>
-            </div>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select defaultValue="" displayEmpty>
+                  <MenuItem value="">Select Asset</MenuItem>
+                  {assets.map(asset => (
+                    <MenuItem key={asset.id} value={asset.id}>{asset.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select defaultValue="daily">
+                  <MenuItem value="daily">Daily</MenuItem>
+                  <MenuItem value="weekly">Weekly</MenuItem>
+                  <MenuItem value="monthly">Monthly</MenuItem>
+                  <MenuItem value="quarterly">Quarterly</MenuItem>
+                  <MenuItem value="yearly">Yearly</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Frequency
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assignee
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
-                <option value="">Select Assignee</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>{user.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Next Due Date
-              </label>
-              <input
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select defaultValue="" displayEmpty>
+                  <MenuItem value="">Select Assignee</MenuItem>
+                  {users.map(user => (
+                    <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Next Due Date"
                 type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                size="small"
+                InputLabelProps={{ shrink: true }}
               />
-            </div>
-          </div>
+            </Grid>
+          </Grid>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Checklist Items
-            </label>
-            <div className="space-y-2">
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Add checklist item"
-              />
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Add checklist item"
-              />
-            </div>
-          </div>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Checklist Items</Typography>
+            <TextField size="small" placeholder="Add checklist item" />
+            <TextField size="small" placeholder="Add checklist item" />
+          </Stack>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
             <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
               Cancel
             </Button>
             <Button onClick={() => setShowCreateModal(false)}>
               Create PM Schedule
             </Button>
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       </Modal>
 
       {/* PM Detail Modal */}
@@ -447,86 +471,90 @@ const PreventiveMaintenance = () => {
         size="xl"
       >
         {selectedPM && (
-          <div className="space-y-6">
+          <Stack spacing={3}>
             {/* Status and Actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+              <Stack direction="row" spacing={1.5} alignItems="center">
                 {getStatusBadge(selectedPM.isActive)}
                 {getFrequencyBadge(selectedPM.frequency)}
-              </div>
-              <div className="flex space-x-2">
-                <Button 
+              </Stack>
+              <Stack direction="row" spacing={1}>
+                <Button
                   variant={selectedPM.isActive ? 'warning' : 'success'}
                   onClick={() => handleToggleStatus(selectedPM.id)}
                 >
                   {selectedPM.isActive ? 'Deactivate' : 'Activate'}
                 </Button>
-              </div>
-            </div>
+              </Stack>
+            </Stack>
 
             {/* PM Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-gray-900">Asset</h4>
-                <p className="text-gray-600">{getAssetName(selectedPM.assetId)}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Assignee</h4>
-                <p className="text-gray-600">{getAssigneeName(selectedPM.assigneeId)}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Frequency</h4>
-                <p className="text-gray-600">{selectedPM.frequency}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Next Due</h4>
-                <p className="text-gray-600">{new Date(selectedPM.nextDue).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Last Completed</h4>
-                <p className="text-gray-600">
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Asset</Typography>
+                <Typography variant="body2" color="text.secondary">{getAssetName(selectedPM.assetId)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Assignee</Typography>
+                <Typography variant="body2" color="text.secondary">{getAssigneeName(selectedPM.assigneeId)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Frequency</Typography>
+                <Typography variant="body2" color="text.secondary">{selectedPM.frequency}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Next Due</Typography>
+                <Typography variant="body2" color="text.secondary">{new Date(selectedPM.nextDue).toLocaleDateString()}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Last Completed</Typography>
+                <Typography variant="body2" color="text.secondary">
                   {selectedPM.lastCompleted ? new Date(selectedPM.lastCompleted).toLocaleDateString() : 'Never'}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Created</h4>
-                <p className="text-gray-600">{new Date(selectedPM.createdAt).toLocaleDateString()}</p>
-              </div>
-            </div>
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Created</Typography>
+                <Typography variant="body2" color="text.secondary">{new Date(selectedPM.createdAt).toLocaleDateString()}</Typography>
+              </Grid>
+            </Grid>
 
             {/* Description */}
             {selectedPM.description && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Description</h4>
-                <p className="text-gray-600">{selectedPM.description}</p>
-              </div>
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Description</Typography>
+                <Typography variant="body2" color="text.secondary">{selectedPM.description}</Typography>
+              </Box>
             )}
 
             {/* Checklist */}
             {selectedPM.checklist && selectedPM.checklist.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Checklist</h4>
-                <div className="space-y-2">
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Checklist</Typography>
+                <Stack spacing={0.75}>
                   {selectedPM.checklist.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={item.completed}
-                        readOnly
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className={item.completed ? 'line-through text-gray-500' : 'text-gray-900'}>
-                        {item.text}
-                      </span>
-                    </div>
+                    <FormControlLabel
+                      key={item.id}
+                      control={<Checkbox checked={item.completed} disabled />}
+                      label={
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: item.completed ? 'text.secondary' : 'text.primary',
+                            textDecoration: item.completed ? 'line-through' : 'none',
+                          }}
+                        >
+                          {item.text}
+                        </Typography>
+                      }
+                    />
                   ))}
-                </div>
-              </div>
+                </Stack>
+              </Box>
             )}
-          </div>
+          </Stack>
         )}
       </Modal>
-    </div>
+    </Stack>
   );
 };
 

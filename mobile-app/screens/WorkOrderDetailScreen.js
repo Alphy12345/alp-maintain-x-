@@ -13,6 +13,17 @@ function TabButton({ label, active, onPress }) {
   );
 }
 
+function getWorkOrderLocationText(workOrder) {
+  if (!workOrder) return '—';
+  if (workOrder.location && typeof workOrder.location === 'string') return workOrder.location;
+  if (workOrder.location_name && typeof workOrder.location_name === 'string') return workOrder.location_name;
+  if (workOrder.location?.name && typeof workOrder.location.name === 'string') return workOrder.location.name;
+  if (workOrder.location_id !== undefined && workOrder.location_id !== null && String(workOrder.location_id).length > 0) {
+    return `Location #${workOrder.location_id}`;
+  }
+  return '—';
+}
+
 function StatusButton({ label, active, disabled, onPress }) {
   return (
     <Pressable
@@ -207,6 +218,8 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     return '—';
   }, [workOrder?.recurrence, workOrder?.start_date]);
 
+  const locationText = useMemo(() => getWorkOrderLocationText(workOrder), [workOrder]);
+
   const partsUsed = useMemo(() => {
     const wop = Array.isArray(workOrder?.work_order_parts) ? workOrder.work_order_parts : [];
     return wop
@@ -328,7 +341,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
               </View>
 
               <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <RowItem left="Location" right={workOrder?.location || '—'} />
+                <RowItem left="Location" right={locationText} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <RowLink left="Asset" right={assetName} onPress={openAsset} />
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />

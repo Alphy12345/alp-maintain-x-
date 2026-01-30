@@ -1,6 +1,4 @@
-@import "tailwindcss";
-
-@theme {
+ :root {
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
@@ -11,107 +9,123 @@
   --color-primary-700: #1d4ed8;
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
-}
+ }
 
-@layer base {
-  * {
-    @apply border-gray-200;
-    -webkit-tap-highlight-color: transparent;
-    --tw-ring-offset-width: 0px;
-    --tw-ring-offset-color: transparent;
-    --tw-ring-color: transparent;
-  }
-  body {
-    @apply bg-gray-50 text-gray-900 font-sans antialiased;
-    color-scheme: light;
-  }
+ * {
+  border-color: #e5e7eb;
+  -webkit-tap-highlight-color: transparent;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: transparent;
+  --tw-ring-color: transparent;
+ }
 
-  ::selection {
-    background: transparent;
-  }
+ body {
+  background-color: #f9fafb;
+  color: #111827;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+ }
 
-  select option,
-  select optgroup {
-    background-color: #0f172a;
-    color: #f1f5f9;
-  }
+ ::selection {
+  background: transparent;
+ }
 
-  select option:checked,
-  select option:hover,
-  select option:focus {
-    background-color: #1f2937;
-    color: #f1f5f9;
-  }
-}
+ select option,
+ select optgroup {
+  background-color: #0f172a;
+  color: #f1f5f9;
+ }
 
-@layer utilities {
+ select option:checked,
+ select option:hover,
+ select option:focus {
+  background-color: #1f2937;
+  color: #f1f5f9;
+ }
+
   /* Global dark UI overrides (apply even when .dark class is NOT present)
      This prevents any white/very-light highlight boxes from appearing anywhere. */
-  .bg-white { @apply bg-slate-900; }
-  .bg-gray-50 { @apply bg-slate-950; }
-  .bg-gray-100 { @apply bg-slate-900; }
-  .bg-gray-200 { @apply bg-slate-800; }
+ .bg-white { background-color: #0f172a; }
+ .bg-gray-50 { background-color: #020617; }
+ .bg-gray-100 { background-color: #0f172a; }
+ .bg-gray-200 { background-color: #1e293b; }
 
-  .bg-primary-50 { @apply bg-slate-800; }
-  .bg-primary-100 { @apply bg-slate-800; }
-  .bg-primary-200 { @apply bg-slate-700; }
+ .bg-primary-50 { background-color: #1e293b; }
+ .bg-primary-100 { background-color: #1e293b; }
+ .bg-primary-200 { background-color: #334155; }
 
-  .hover\:bg-gray-50:hover { @apply bg-slate-900; }
-  .hover\:bg-gray-100:hover { @apply bg-slate-800; }
-  .hover\:bg-primary-50:hover { @apply bg-slate-800; }
+ .hover\:bg-gray-50:hover { background-color: #0f172a; }
+ .hover\:bg-gray-100:hover { background-color: #1e293b; }
+ .hover\:bg-primary-50:hover { background-color: #1e293b; }
 
-  .dark body {
-    @apply bg-slate-950 text-slate-100;
-    color-scheme: dark;
-  }
+ .dark body {
+  background-color: #020617;
+  color: #f1f5f9;
+  color-scheme: dark;
+ }
 
-  .dark .bg-white { @apply bg-slate-900; }
-  .dark .bg-gray-50 { @apply bg-slate-950; }
-  .dark .bg-gray-100 { @apply bg-slate-900; }
-  .dark .bg-gray-200 { @apply bg-slate-800; }
+ .dark .bg-white { background-color: #0f172a; }
+ .dark .bg-gray-50 { background-color: #020617; }
+ .dark .bg-gray-100 { background-color: #0f172a; }
+ .dark .bg-gray-200 { background-color: #1e293b; }
 
-  .dark .bg-primary-50 { @apply bg-slate-800; }
-  .dark .bg-primary-100 { @apply bg-slate-800; }
-  .dark .bg-primary-200 { @apply bg-slate-700; }
+ .dark .bg-primary-50 { background-color: #1e293b; }
+ .dark .bg-primary-100 { background-color: #1e293b; }
+ .dark .bg-primary-200 { background-color: #334155; }
 
-  .dark .hover\:bg-gray-50:hover { @apply bg-slate-900; }
-  .dark .hover\:bg-gray-100:hover { @apply bg-slate-800; }
-  .dark .hover\:bg-primary-50:hover { @apply bg-slate-800; }
+ .dark .hover\:bg-gray-50:hover { background-color: #0f172a; }
+ .dark .hover\:bg-gray-100:hover { background-color: #1e293b; }
+ .dark .hover\:bg-primary-50:hover { background-color: #1e293b; }
 
-  .dark .text-gray-900 { @apply text-slate-100; }
-  .dark .text-gray-800 { @apply text-slate-100; }
-  .dark .text-gray-700 { @apply text-slate-200; }
-  .dark .text-gray-600 { @apply text-slate-300; }
-  .dark .text-gray-500 { @apply text-slate-400; }
-  .dark .text-gray-400 { @apply text-slate-400; }
+ .dark .text-gray-900 { color: #f1f5f9; }
+ .dark .text-gray-800 { color: #f1f5f9; }
+ .dark .text-gray-700 { color: #e2e8f0; }
+ .dark .text-gray-600 { color: #cbd5e1; }
+ .dark .text-gray-500 { color: #94a3b8; }
+ .dark .text-gray-400 { color: #94a3b8; }
 
-  .dark .border-gray-200 { @apply border-slate-800; }
-  .dark .border-gray-100 { @apply border-slate-800; }
-  .dark .border-gray-300 { @apply border-slate-700; }
+ .dark .border-gray-200 { border-color: #1e293b; }
+ .dark .border-gray-100 { border-color: #1e293b; }
+ .dark .border-gray-300 { border-color: #334155; }
 
-  .dark input, .dark textarea, .dark select {
-    @apply bg-slate-900 text-slate-100 border-slate-700;
-  }
+ .dark input, .dark textarea, .dark select {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  border-color: #334155;
+ }
 
-  .dark input::placeholder, .dark textarea::placeholder {
-    @apply text-slate-500;
-  }
-}
+ .dark input::placeholder, .dark textarea::placeholder {
+  color: #64748b;
+ }
 
-@layer components {
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    outline: none;
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    background-color: var(--color-primary-600);
+    color: #ffffff;
   }
+  .btn-primary:hover { background-color: var(--color-primary-700); }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+    background-color: #e5e7eb;
+    color: #111827;
   }
+  .btn-secondary:hover { background-color: #d1d5db; }
   
   .btn-ghost {
-    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500;
+    color: #4b5563;
   }
-}
+  .btn-ghost:hover { color: #111827; background-color: #f3f4f6; }
+ 

@@ -2,66 +2,83 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Filter, Plus, Search } from 'lucide-react';
 import { Button, Card } from '../components';
-
-const chipBase =
-  'inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50';
+import { Box, Chip, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 
 const WorkOrderTemplates = () => {
   const [search, setSearch] = useState('');
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Work Order Templates</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Work Order Templates"
-              className="w-80 pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+    <Stack spacing={3}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>Work Order Templates</Typography>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+          <TextField
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Work Order Templates"
+            sx={{ width: { xs: '100%', sm: 360 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
           <Button>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus size={16} style={{ marginRight: 8 }} />
             New Work Order Template
-            <ChevronDown className="w-4 h-4 ml-2" />
+            <ChevronDown size={16} style={{ marginLeft: 8 }} />
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <button type="button" className={chipBase}>
-          <Filter className="h-4 w-4 text-gray-400" />
-          Location
-        </button>
-        <button type="button" className={chipBase}>Asset</button>
-        <button type="button" className={chipBase}>Asset Types</button>
-        <button type="button" className={chipBase}>Category</button>
-        <button type="button" className={chipBase}>Procedure</button>
-      </div>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Chip icon={<Filter size={16} />} label="Location" variant="outlined" clickable />
+        <Chip label="Asset" variant="outlined" clickable />
+        <Chip label="Asset Types" variant="outlined" clickable />
+        <Chip label="Category" variant="outlined" clickable />
+        <Chip label="Procedure" variant="outlined" clickable />
+      </Stack>
 
-      <Card className="min-h-[60vh] flex items-center justify-center">
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className="h-24 w-24 rounded-2xl bg-primary-50 flex items-center justify-center">
-            <div className="h-14 w-14 rounded-b-2xl bg-primary-600" />
-          </div>
-          <div>
-            <div className="text-xl font-semibold text-gray-900">Create your first Work Order Template</div>
-            <div className="text-sm text-gray-600 mt-2">
-              Get Work Orders created in half the time by using a template instead of filling the same fields over and over again.
-            </div>
-          </div>
-        </div>
+      <Card>
+        <Box sx={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
+          <Stack spacing={2} alignItems="center" textAlign="center">
+            <Box
+              sx={{
+                height: 96,
+                width: 96,
+                borderRadius: 3,
+                bgcolor: 'primary.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Box sx={{ height: 56, width: 56, borderRadius: 2, bgcolor: 'primary.main' }} />
+            </Box>
+
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                Create your first Work Order Template
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Get Work Orders created in half the time by using a template instead of filling the same fields over and over again.
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
       </Card>
 
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-gray-500">
-        Work Order Templates UI is a placeholder layout.
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <Typography variant="caption" color="text.secondary">
+          Work Order Templates UI is a placeholder layout.
+        </Typography>
       </motion.div>
-    </div>
+    </Stack>
   );
 };
 

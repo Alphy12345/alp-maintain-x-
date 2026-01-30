@@ -2,6 +2,20 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Plus, Play, GitBranch, Bolt } from 'lucide-react';
 import Button from '../components/Button';
+import {
+  Box,
+  Divider,
+  Grid,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from '@mui/material';
 
 const Automations = () => {
   const navigate = useNavigate();
@@ -22,101 +36,114 @@ const Automations = () => {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Automations</h1>
-        <Button
-          onClick={() => navigate('/automations/create')}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>Automations</Typography>
+        <Button onClick={() => navigate('/automations/create')}>
+          <Plus size={16} style={{ marginRight: 8 }} />
           New Automation
         </Button>
-      </div>
+      </Stack>
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4">
-            <div className="inline-flex rounded-md bg-gray-100 p-1">
-              <button
-                type="button"
-                onClick={() => setTab('enabled')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  tab === 'enabled'
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Enabled
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab('disabled')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  tab === 'disabled'
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Disabled
-              </button>
-            </div>
-          </div>
+      <Grid container spacing={2}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            <Tabs value={tab} onChange={(_e, v) => setTab(v)} variant="fullWidth" sx={{ px: 1, pt: 1 }}>
+              <Tab value="enabled" label="Enabled" />
+              <Tab value="disabled" label="Disabled" />
+            </Tabs>
+            <Divider />
 
-          <div className="p-3 space-y-2">
-            {filtered.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-primary-700" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{a.name}</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-2 w-16 rounded bg-blue-100" />
-                    <div className="h-2 w-12 rounded bg-blue-50" />
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+            <Box sx={{ p: 1.5 }}>
+              <List disablePadding>
+                {filtered.map((a) => (
+                  <ListItemButton
+                    key={a.id}
+                    sx={{
+                      mb: 1,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 44, mt: 0.25 }}>
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '999px',
+                          bgcolor: 'primary.50',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Zap size={16} />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
+                          {a.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                          <Box sx={{ height: 8, width: 64, borderRadius: 99, bgcolor: 'primary.100' }} />
+                          <Box sx={{ height: 8, width: 48, borderRadius: 99, bgcolor: 'primary.50' }} />
+                        </Stack>
+                      }
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Box>
+          </Paper>
+        </Grid>
 
-        <div className="col-span-12 lg:col-span-8 bg-white rounded-lg border border-gray-200 min-h-[540px] flex items-center justify-center">
-          <div className="text-center max-w-md px-6">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center">
-                <Play className="w-4 h-4 text-gray-500" />
-              </div>
-              <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                <GitBranch className="w-6 h-6 text-primary-700" />
-              </div>
-              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center">
-                <Bolt className="w-4 h-4 text-gray-500" />
-              </div>
-            </div>
+        <Grid item xs={12} lg={8}>
+          <Paper
+            variant="outlined"
+            sx={{
+              minHeight: 540,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 3,
+            }}
+          >
+            <Box sx={{ textAlign: 'center', maxWidth: 520 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center">
+                <Box sx={{ width: 40, height: 40, borderRadius: '999px', border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Play size={16} />
+                </Box>
+                <Box sx={{ width: 56, height: 56, borderRadius: '999px', bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <GitBranch size={22} />
+                </Box>
+                <Box sx={{ width: 40, height: 40, borderRadius: '999px', border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bolt size={16} />
+                </Box>
+              </Stack>
 
-            <h2 className="mt-6 text-lg font-semibold text-gray-900">Start building automated workflows</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Use conditions to trigger tasks and optimize your maintenance operations.
-            </p>
+              <Typography variant="h6" sx={{ mt: 3, fontWeight: 800 }}>
+                Start building automated workflows
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Use conditions to trigger tasks and optimize your maintenance operations.
+              </Typography>
 
-            <div className="mt-6">
-              <Button
-                onClick={() => navigate('/automations/create')}
-                className="flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                New Automation
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              <Box sx={{ mt: 3 }}>
+                <Button onClick={() => navigate('/automations/create')}>
+                  <Plus size={16} style={{ marginRight: 8 }} />
+                  New Automation
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 };
 

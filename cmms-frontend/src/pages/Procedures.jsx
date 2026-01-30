@@ -30,9 +30,6 @@ import useStore from '../store/useStore';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
-const chipBase =
-  'inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50';
-
 const Procedures = () => {
   const { bumpProceduresVersion } = useStore();
   const [search, setSearch] = useState('');
@@ -1027,7 +1024,7 @@ const Procedures = () => {
         title={mode === 'create' ? 'New Procedure' : 'Edit Procedure'}
         size="xl"
       >
-        <div className="space-y-4">
+        <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
 
           <TextField
@@ -1087,34 +1084,59 @@ const Procedures = () => {
                               />
                             </Grid>
                             <Grid item xs={12} md={6} sx={{ position: 'relative' }}>
-                              <button
+                              <Box
+                                component="button"
                                 type="button"
                                 onClick={() => {
                                   setTypeMenuOpenForId((prev) => (prev === it.id ? null : it.id));
                                   setTypeSearch('');
                                 }}
-                                className="w-full inline-flex items-center justify-between gap-2 px-3 py-2 border border-gray-700 rounded-md bg-transparent text-gray-100 focus:outline-none focus:ring-0"
+                                sx={{
+                                  width: '100%',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 1,
+                                  px: 1.5,
+                                  py: 1,
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  bgcolor: 'transparent',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                }}
                               >
-                                <span className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.primary' }}>
                                   {(() => {
                                     const cfg = fieldTypeOptions.find((x) => x.key === it.field_type) || fieldTypeOptions[1];
                                     const Icon = cfg.Icon;
                                     return (
                                       <>
-                                        <Icon className="h-4 w-4 text-gray-500" />
+                                        <Icon size={16} />
                                         {cfg.label}
                                       </>
                                     );
                                   })()}
-                                </span>
-                                <ChevronDown className="h-4 w-4 text-gray-400" />
-                              </button>
+                                </Stack>
+                                <ChevronDown size={16} />
+                              </Box>
 
                               {typeMenuOpenForId === it.id && (
-                                <div className="absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-lg overflow-hidden">
-                                  <div className="px-2 py-2 border-b border-gray-700">
-                                    <div className="relative">
-                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Paper
+                                  elevation={8}
+                                  sx={{
+                                    position: 'absolute',
+                                    zIndex: 20,
+                                    mt: 1,
+                                    width: '100%',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <Box sx={{ px: 1, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                                       <TextField
                                         size="small"
                                         value={typeSearch}
@@ -1129,31 +1151,45 @@ const Procedures = () => {
                                           ),
                                         }}
                                       />
-                                    </div>
-                                  </div>
-                                  <div className="max-h-60 overflow-y-auto">
+                                  </Box>
+
+                                  <Box sx={{ maxHeight: 240, overflowY: 'auto' }}>
                                     {fieldTypeOptions
                                       .filter((x) => x.label.toLowerCase().includes(typeSearch.trim().toLowerCase()))
                                       .map((x) => {
                                         const Icon = x.Icon;
                                         const active = x.key === it.field_type;
                                         return (
-                                          <button
+                                          <Box
+                                            component="button"
                                             key={x.key}
                                             type="button"
                                             onClick={() => {
                                               updateBuilderItem(it.id, { field_type: x.key });
                                               setTypeMenuOpenForId(null);
                                             }}
-                                            className={`w-full px-3 py-2 text-left text-sm inline-flex items-center gap-2 text-gray-100 focus:outline-none ${active ? 'bg-gray-800' : 'bg-transparent'} hover:bg-gray-800`}
+                                            sx={{
+                                              width: '100%',
+                                              px: 1.5,
+                                              py: 1,
+                                              textAlign: 'left',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: 1,
+                                              fontSize: 14,
+                                              border: 0,
+                                              bgcolor: active ? 'action.selected' : 'transparent',
+                                              cursor: 'pointer',
+                                              '&:hover': { bgcolor: 'action.hover' },
+                                            }}
                                           >
-                                            <Icon className="h-4 w-4 text-gray-500" />
+                                            <Icon size={16} />
                                             {x.label}
-                                          </button>
+                                          </Box>
                                         );
                                       })}
-                                  </div>
-                                </div>
+                                  </Box>
+                                </Paper>
                               )}
                             </Grid>
                           </Grid>
@@ -1339,13 +1375,13 @@ const Procedures = () => {
             </Grid>
           </Grid>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
             <Button variant="outlined" color="inherit" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button variant="contained" onClick={handleSave} disabled={saving || !String(form.name || '').trim()}>
               {saving ? 'Saving…' : 'Save'}
             </Button>
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       </Modal>
     </Stack>
   );

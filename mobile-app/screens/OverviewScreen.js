@@ -71,6 +71,17 @@ function normalizeStatus(status) {
   return { label: status || 'Status', tone: 'neutral' };
 }
 
+function getWorkOrderLocationText(wo) {
+  if (!wo) return '—';
+  if (wo.location && typeof wo.location === 'string') return wo.location;
+  if (wo.location_name && typeof wo.location_name === 'string') return wo.location_name;
+  if (wo.location?.name && typeof wo.location.name === 'string') return wo.location.name;
+  if (wo.location_id !== undefined && wo.location_id !== null && String(wo.location_id).length > 0) {
+    return `Location #${wo.location_id}`;
+  }
+  return '—';
+}
+
 export default function OverviewScreen() {
   const { user, setUser } = useAuth();
   const { mode, colors, toggleMode } = useTheme();
@@ -507,6 +518,7 @@ export default function OverviewScreen() {
                 {dueTodayItems.map((wo) => {
                   const statusMeta = normalizeStatus(wo?.status);
                   const prMeta = normalizePriority(wo?.priority);
+                  const locationText = getWorkOrderLocationText(wo);
                   return (
                     <Pressable
                       key={wo?.id?.toString?.() || String(Math.random())}
@@ -515,6 +527,9 @@ export default function OverviewScreen() {
                     >
                       <Text style={styles.woTitle} numberOfLines={2}>
                         {wo?.name || 'Work Order'}
+                      </Text>
+                      <Text style={[styles.woSub, { color: colors.mutedText }]} numberOfLines={1}>
+                        {locationText}
                       </Text>
                       <View style={styles.woMetaRow}>
                         <Text style={styles.woId}>#{wo?.id ?? '-'}</Text>
@@ -564,6 +579,7 @@ export default function OverviewScreen() {
                 {statusSheetItems.map((wo) => {
                   const statusMeta = normalizeStatus(wo?.status);
                   const prMeta = normalizePriority(wo?.priority);
+                  const locationText = getWorkOrderLocationText(wo);
                   return (
                     <Pressable
                       key={wo?.id?.toString?.() || String(Math.random())}
@@ -572,6 +588,9 @@ export default function OverviewScreen() {
                     >
                       <Text style={styles.woTitle} numberOfLines={2}>
                         {wo?.name || 'Work Order'}
+                      </Text>
+                      <Text style={[styles.woSub, { color: colors.mutedText }]} numberOfLines={1}>
+                        {locationText}
                       </Text>
                       <View style={styles.woMetaRow}>
                         <Text style={styles.woId}>#{wo?.id ?? '-'}</Text>
@@ -849,6 +868,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     marginBottom: 8,
+  },
+  woSub: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 10,
   },
   woMetaRow: {
     flexDirection: 'row',

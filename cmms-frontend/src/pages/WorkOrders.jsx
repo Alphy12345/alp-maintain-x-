@@ -515,46 +515,58 @@ const WorkOrders = () => {
 
     if (proc === undefined) {
       return (
-        <div className="mt-3 text-xs text-gray-500">
-          Loading procedure steps…
-        </div>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Loading procedure steps…
+          </Typography>
+        </Box>
       );
     }
 
     if (proc === null) {
       return (
-        <div className="mt-3 text-xs text-gray-500">
-          Unable to load procedure steps.
-        </div>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Unable to load procedure steps.
+          </Typography>
+        </Box>
       );
     }
 
     if (sections.length === 0) {
       return (
-        <div className="mt-3 text-xs text-gray-500">
-          No steps found for this procedure.
-        </div>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            No steps found for this procedure.
+          </Typography>
+        </Box>
       );
     }
 
     return (
-      <div className="mt-3 space-y-3">
-        <div className="text-xs font-medium text-gray-500">Procedure Details</div>
-        <div className="space-y-3">
+      <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography variant="caption" sx={{ fontWeight: 700 }} color="text.secondary">
+          Procedure Details
+        </Typography>
+        <Stack spacing={2}>
           {sections
             .slice()
             .sort((a, b) => Number(a?.order || 0) - Number(b?.order || 0))
             .map((sec) => {
               const fields = Array.isArray(sec?.fields) ? sec.fields : [];
               return (
-                <div key={sec?.id ?? `${id}-sec-${sec?.order ?? ''}-${sec?.title ?? ''}`} className="rounded-md border border-gray-200 px-3 py-3">
-                  <div className="text-sm font-semibold text-gray-900">{sec?.title || 'Untitled section'}</div>
+                <Paper key={sec?.id ?? `${id}-sec-${sec?.order ?? ''}-${sec?.title ?? ''}`} variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                    {sec?.title || 'Untitled section'}
+                  </Typography>
                   {sec?.description ? (
-                    <div className="mt-1 text-xs text-gray-600">{sec.description}</div>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      {sec.description}
+                    </Typography>
                   ) : null}
 
                   {fields.length > 0 ? (
-                    <div className="mt-3 space-y-2">
+                    <Stack spacing={1.5} sx={{ mt: 2 }}>
                       {fields
                         .slice()
                         .sort((a, b) => Number(a?.order || 0) - Number(b?.order || 0))
@@ -562,40 +574,52 @@ const WorkOrders = () => {
                           const cfgOptions = Array.isArray(f?.config?.options) ? f.config.options : [];
                           const options = cfgOptions.length ? cfgOptions : (Array.isArray(f?.options) ? f.options : []);
                           return (
-                            <div key={f?.id ?? `${id}-field-${f?.order ?? ''}-${f?.label ?? ''}`} className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="text-sm text-gray-900">{f?.label || 'Untitled field'}</div>
-                                <div className="text-xs text-gray-600">{String(f?.field_type || 'text')}</div>
-                              </div>
-                              <div className="mt-1 text-xs text-gray-600">
+                            <Paper
+                              key={f?.id ?? `${id}-field-${f?.order ?? ''}-${f?.label ?? ''}`}
+                              variant="outlined"
+                              sx={{ p: 1.5, bgcolor: 'action.hover' }}
+                            >
+                              <Stack direction="row" spacing={2} alignItems="flex-start" justifyContent="space-between">
+                                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                  {f?.label || 'Untitled field'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {String(f?.field_type || 'text')}
+                                </Typography>
+                              </Stack>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                 {Number(f?.required) ? 'Required' : 'Optional'}
-                              </div>
+                              </Typography>
                               {f?.help_text ? (
-                                <div className="mt-1 text-xs text-gray-600">{f.help_text}</div>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                  {f.help_text}
+                                </Typography>
                               ) : null}
                               {options.length > 0 ? (
-                                <div className="mt-1 text-xs text-gray-600">
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                   Options: {options.map((o) => String(o?.label ?? o ?? '').trim()).filter(Boolean).join(', ')}
-                                </div>
+                                </Typography>
                               ) : null}
-                            </div>
+                            </Paper>
                           );
                         })}
-                    </div>
+                    </Stack>
                   ) : (
-                    <div className="mt-2 text-xs text-gray-500">No fields</div>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+                      No fields
+                    </Typography>
                   )}
-                </div>
+                </Paper>
               );
             })}
-        </div>
+        </Stack>
 
         {viewMode === 'calendar' && dragUi.active ? (
-          <div className="text-sm text-gray-600">
-            Dragging work order: <span className="font-semibold">{String(dragUi.workOrderId)}</span>
-          </div>
+          <Typography variant="body2" color="text.secondary">
+            Dragging work order: <Box component="span" sx={{ fontWeight: 800 }}>{String(dragUi.workOrderId)}</Box>
+          </Typography>
         ) : null}
-      </div>
+      </Stack>
     );
   };
 
@@ -1710,7 +1734,7 @@ const WorkOrders = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       {/* Header */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
         <Box sx={{ minWidth: 0 }}>
@@ -2167,7 +2191,7 @@ const WorkOrders = () => {
             ))}
           </Grid>
 
-          <div className="grid grid-cols-7">
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
             {calendarDays.map((d) => {
               const key = dayKey(d);
               const items = workOrdersByDay.get(key) || [];
@@ -2180,26 +2204,48 @@ const WorkOrders = () => {
               const dateIso = toDateOnlyIso(d);
               const isDropTarget = Boolean(dragUi?.dragging) && String(dragUi?.targetDayKey || '') === String(key);
               return (
-                <div
+                <Box
                   key={key}
                   data-cal-daykey={key}
                   data-cal-dateiso={dateIso}
                   data-cal-dateonly={key}
-                  className={`min-h-[140px] border-r border-b border-gray-200 p-2 transition-colors ${
-                    'bg-white'
-                  } ${isDropTarget ? 'bg-primary-50' : ''}`}
+                  sx={{
+                    minHeight: 140,
+                    borderRight: 1,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    p: 1.5,
+                    bgcolor: isDropTarget ? 'action.hover' : 'background.paper',
+                    transition: 'background-color 150ms ease',
+                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className={`text-xs font-semibold ${isToday ? 'text-primary-700' : (inMonth ? 'text-gray-900' : 'text-gray-400')}`}>{d.getDate()}</div>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography
+                      variant="caption"
+                      sx={{ fontWeight: 800, color: isToday ? 'primary.main' : (inMonth ? 'text.primary' : 'text.disabled') }}
+                    >
+                      {d.getDate()}
+                    </Typography>
                     {items.length > 0 ? (
-                      <div className="text-[11px] text-gray-500">{items.length}</div>
+                      <Typography variant="caption" color="text.secondary">
+                        {items.length}
+                      </Typography>
                     ) : null}
-                  </div>
-                  <div className={`mt-2 space-y-1 ${calendarMode === 'month' ? '' : 'max-h-[110px] overflow-y-auto pr-1'}`}>
+                  </Stack>
+
+                  <Stack
+                    spacing={0.75}
+                    sx={{
+                      mt: 1,
+                      maxHeight: calendarMode === 'month' ? 'none' : 110,
+                      overflowY: calendarMode === 'month' ? 'visible' : 'auto',
+                      pr: calendarMode === 'month' ? 0 : 0.5,
+                    }}
+                  >
                     {visibleItems.map((wo) => (
-                      <button
+                      <Box
                         key={wo.__occKey || wo.id}
-                        type="button"
+                        component="button"
                         title={`Work Order: ${String(wo.title || wo.id)}\nStart: ${formatShort(wo?.startDate || wo?.scheduledDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}\nDue: ${formatShort(wo?.dueDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}\nPriority: ${String(wo.priority || '—')}`}
                         onPointerDown={(e) => {
                           if (viewMode !== 'calendar') return;
@@ -2239,24 +2285,28 @@ const WorkOrders = () => {
                           window.addEventListener('pointercancel', onCalendarPointerUp);
                         }}
                         style={{ touchAction: 'none' }}
-                        className={`relative group w-full text-left px-2 py-1 rounded border bg-white hover:bg-gray-50 transition-colors border-gray-200 cursor-grab active:cursor-grabbing ${
-                          dragUi?.dragging && String(dragUi?.workOrderId || '') === String(wo.id) ? 'opacity-0' : ''
-                        }`}
+                        sx={{
+                          width: '100%',
+                          textAlign: 'left',
+                          px: 1,
+                          py: 0.75,
+                          borderRadius: 1,
+                          border: 1,
+                          borderColor: 'divider',
+                          bgcolor: 'background.default',
+                          cursor: 'grab',
+                          opacity: (dragUi?.dragging && String(dragUi?.workOrderId || '') === String(wo.id)) ? 0 : 1,
+                          '&:hover': { bgcolor: 'action.hover' },
+                          '&:active': { cursor: 'grabbing' },
+                        }}
                       >
-                        <div className="text-xs font-medium text-gray-900 truncate">{wo.title || wo.id}</div>
-                        <div className="hidden group-hover:block absolute z-50 left-0 top-full mt-1 w-64 rounded-md border border-gray-200 bg-white shadow-lg p-2">
-                          <div className="text-xs font-semibold text-gray-900 truncate">{wo.title || wo.id}</div>
-                          <div className="mt-1 text-[11px] text-gray-600">
-                            <div><span className="font-medium">Start:</span> {formatShort(wo?.startDate || wo?.scheduledDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
-                            <div><span className="font-medium">Due:</span> {formatShort(wo?.dueDate, wo?.recurrence === 'monthly_by_date' ? 'weekday_day' : 'month_day') || '—'}</div>
-                            <div className="mt-1"><span className="font-medium">Priority:</span> {String(wo.priority || '—')}</div>
-                          </div>
-                        </div>
-                      </button>
+                        <Typography variant="caption" sx={{ fontWeight: 700 }} noWrap>
+                          {wo.title || wo.id}
+                        </Typography>
+                      </Box>
                     ))}
                     {calendarMode === 'month' && hiddenItems.length > 0 ? (
-                      <button
-                        type="button"
+                      <MuiButton
                         onPointerDown={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -2271,29 +2321,38 @@ const WorkOrders = () => {
                             items: hiddenItems,
                           });
                         }}
-                        className="w-full text-left text-[11px] font-medium text-primary-600 hover:text-primary-700 px-2"
+                        variant="text"
+                        size="small"
+                        sx={{ justifyContent: 'flex-start', px: 1 }}
                       >
                         +{hiddenItems.length} more
-                      </button>
+                      </MuiButton>
                     ) : null}
-                  </div>
-                </div>
+                  </Stack>
+                </Box>
               );
             })}
-          </div>
+          </Box>
 
           {dragUi?.active ? (
-            <div
-              className="fixed z-[9999] pointer-events-none"
-              style={{ left: `${Number(dragUi.x || 0) + 12}px`, top: `${Number(dragUi.y || 0) + 12}px` }}
+            <Box
+              sx={{
+                position: 'fixed',
+                zIndex: 9999,
+                pointerEvents: 'none',
+                left: `${Number(dragUi.x || 0) + 12}px`,
+                top: `${Number(dragUi.y || 0) + 12}px`,
+              }}
             >
-              <div className="w-60 px-2 py-1 rounded border border-primary-300 bg-white shadow-lg opacity-95">
-                <div className="text-xs font-medium text-gray-900 truncate">
+              <Paper variant="outlined" sx={{ px: 1.5, py: 1, width: 240, opacity: 0.95 }}>
+                <Typography variant="caption" sx={{ fontWeight: 800 }} noWrap>
                   {(workOrders || []).find((wo) => String(wo?.id) === String(dragUi.workOrderId))?.title || String(dragUi.workOrderId || '')}
-                </div>
-                <div className="text-[11px] text-gray-500">Drop on a date to reschedule</div>
-              </div>
-            </div>
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Drop on a date to reschedule
+                </Typography>
+              </Paper>
+            </Box>
           ) : null}
         </Paper>
       ) : (
@@ -2374,108 +2433,111 @@ const WorkOrders = () => {
 
           <Grid item xs={12} lg={8}>
             <Paper ref={workOrderDetailsRef} variant="outlined" sx={{ overflow: 'hidden' }}>
-          {!selectedWorkOrder ? (
-            <div className="h-full min-h-[65vh] flex items-center justify-center p-8 text-center">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Select a work order</p>
-                <p className="mt-1 text-sm text-gray-500">Details will appear here.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 space-y-6">
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} justifyContent="space-between">
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedWorkOrder.id}
+              {!selectedWorkOrder ? (
+                <Stack sx={{ minHeight: '65vh', p: 4 }} alignItems="center" justifyContent="center" spacing={1}>
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                    Select a work order
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.5 }}>
-                    {selectedWorkOrder.title}
+                  <Typography variant="body2" color="text.secondary">
+                    Details will appear here.
                   </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-                    {getStatusBadge(normalizeStatus(selectedWorkOrder.status))}
-                    {getPriorityBadge(selectedWorkOrder.priority)}
-                  </Stack>
-                </Box>
-
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
-                  <MuiButton variant="outlined" onClick={() => openEditWorkOrder(selectedWorkOrder)}>
-                    Edit
-                  </MuiButton>
-                  <MuiButton variant="outlined" color="error" onClick={() => handleDeleteWorkOrder(selectedWorkOrder.id)}>
-                    Delete
-                  </MuiButton>
                 </Stack>
-              </Stack>
+              ) : (
+                <Box sx={{ p: 3 }}>
+                  <Stack spacing={3}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} justifyContent="space-between">
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {selectedWorkOrder.id}
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.5 }}>
+                          {selectedWorkOrder.title}
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                          {getStatusBadge(normalizeStatus(selectedWorkOrder.status))}
+                          {getPriorityBadge(selectedWorkOrder.priority)}
+                        </Stack>
+                      </Box>
 
-              <Box>
-                <Typography variant="caption" sx={{ fontWeight: 700 }} color="text.secondary">
-                  Status
-                </Typography>
-                <Grid container spacing={1.5} sx={{ mt: 1, maxWidth: 520 }}>
-                  {[
-                    { key: 'on_hold', label: 'On Hold', Icon: PauseCircle, color: 'warning' },
-                    { key: 'in_progress', label: 'In Progress', Icon: RefreshCw, color: 'info' },
-                    { key: 'completed', label: 'Done', Icon: Check, color: 'success' },
-                  ].map((s) => {
-                    const active = normalizeStatus(selectedWorkOrder.status) === s.key;
-                    const Icon = s.Icon;
-                    return (
-                      <Grid item xs={12} sm={4} key={s.key}>
-                        <MuiButton
-                          fullWidth
-                          type="button"
-                          disabled={saving}
-                          onClick={() => handleStatusChange(selectedWorkOrder.id, s.key)}
-                          variant={active ? 'contained' : 'outlined'}
-                          color={s.color}
-                          startIcon={<Icon size={18} />}
-                        >
-                          {s.label}
+                      <Stack direction="row" spacing={1} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                        <MuiButton variant="outlined" onClick={() => openEditWorkOrder(selectedWorkOrder)}>
+                          Edit
                         </MuiButton>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
+                        <MuiButton variant="outlined" color="error" onClick={() => handleDeleteWorkOrder(selectedWorkOrder.id)}>
+                          Delete
+                        </MuiButton>
+                      </Stack>
+                    </Stack>
 
-              <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>General</Typography>
-                </Box>
-                <Box sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary">Status</Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>{String(normalizeStatus(selectedWorkOrder.status))}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary">Priority</Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>{String(selectedWorkOrder.priority || 'low')}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary">Work Type</Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>{String(selectedWorkOrder.workType || 'reactive')}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="caption" color="text.secondary">Estimated Time</Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {selectedWorkOrder.estimatedDuration
-                          ? `${Math.floor(Number(selectedWorkOrder.estimatedDuration) / 60)}h ${Number(selectedWorkOrder.estimatedDuration) % 60}m`
-                          : '—'}
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 700 }} color="text.secondary">
+                        Status
                       </Typography>
-                    </Grid>
-                  </Grid>
-
-                  {selectedWorkOrder.procedure ? (
-                    <Box sx={{ mt: 2 }}>
-                      {renderProcedureSteps(selectedWorkOrder.procedure)}
+                      <Grid container spacing={1.5} sx={{ mt: 1, maxWidth: 520 }}>
+                        {[
+                          { key: 'on_hold', label: 'On Hold', Icon: PauseCircle, color: 'warning' },
+                          { key: 'in_progress', label: 'In Progress', Icon: RefreshCw, color: 'info' },
+                          { key: 'completed', label: 'Done', Icon: Check, color: 'success' },
+                        ].map((s) => {
+                          const active = normalizeStatus(selectedWorkOrder.status) === s.key;
+                          const Icon = s.Icon;
+                          return (
+                            <Grid item xs={12} sm={4} key={s.key}>
+                              <MuiButton
+                                fullWidth
+                                type="button"
+                                disabled={saving}
+                                onClick={() => handleStatusChange(selectedWorkOrder.id, s.key)}
+                                variant={active ? 'contained' : 'outlined'}
+                                color={s.color}
+                                startIcon={<Icon size={18} />}
+                              >
+                                {s.label}
+                              </MuiButton>
+                            </Grid>
+                          );
+                        })}
+                      </Grid>
                     </Box>
-                  ) : null}
-                </Box>
-              </Paper>
+
+                    <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                      <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>General</Typography>
+                      </Box>
+                      <Box sx={{ p: 2 }}>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="caption" color="text.secondary">Status</Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>{String(normalizeStatus(selectedWorkOrder.status))}</Typography>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="caption" color="text.secondary">Priority</Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>{String(selectedWorkOrder.priority || 'low')}</Typography>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="caption" color="text.secondary">Work Type</Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>{String(selectedWorkOrder.workType || 'reactive')}</Typography>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="caption" color="text.secondary">Estimated Time</Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              {selectedWorkOrder.estimatedDuration
+                                ? `${Math.floor(Number(selectedWorkOrder.estimatedDuration) / 60)}h ${Number(selectedWorkOrder.estimatedDuration) % 60}m`
+                                : '—'}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+
+                        {selectedWorkOrder.procedure ? (
+                          <Box sx={{ mt: 2 }}>
+                            {renderProcedureSteps(selectedWorkOrder.procedure)}
+                          </Box>
+                        ) : null}
+                      </Box>
+                    </Paper>
 
               <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Assignment & Location</Typography>
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -2501,7 +2563,7 @@ const WorkOrders = () => {
               </Paper>
 
               <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Scheduling</Typography>
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -2527,7 +2589,7 @@ const WorkOrders = () => {
               </Paper>
 
               <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Procedure, Parts, Category, Vendor</Typography>
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -2569,7 +2631,7 @@ const WorkOrders = () => {
               </Paper>
 
               <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Description</Typography>
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -2579,27 +2641,28 @@ const WorkOrders = () => {
                 </Box>
               </Paper>
 
-              {selectedWorkOrder.checklist && selectedWorkOrder.checklist.length > 0 && (
-                <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                  <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Checklist</Typography>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Stack spacing={1}>
-                      {selectedWorkOrder.checklist.map((item) => (
-                        <Stack key={item.id} direction="row" spacing={1} alignItems="center">
-                          <input type="checkbox" checked={item.completed} readOnly />
-                          <Typography variant="body2" color={item.completed ? 'text.secondary' : 'text.primary'} sx={{ textDecoration: item.completed ? 'line-through' : 'none' }}>
-                            {item.text}
-                          </Typography>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Paper>
+                    {selectedWorkOrder.checklist && selectedWorkOrder.checklist.length > 0 && (
+                      <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                        <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Checklist</Typography>
+                        </Box>
+                        <Box sx={{ p: 2 }}>
+                          <Stack spacing={1}>
+                            {selectedWorkOrder.checklist.map((item) => (
+                              <Stack key={item.id} direction="row" spacing={1} alignItems="center">
+                                <input type="checkbox" checked={item.completed} readOnly />
+                                <Typography variant="body2" color={item.completed ? 'text.secondary' : 'text.primary'} sx={{ textDecoration: item.completed ? 'line-through' : 'none' }}>
+                                  {item.text}
+                                </Typography>
+                              </Stack>
+                            ))}
+                          </Stack>
+                        </Box>
+                      </Paper>
+                    )}
+                  </Stack>
+                </Box>
               )}
-            </div>
-          )}
             </Paper>
           </Grid>
         </Grid>
@@ -2612,7 +2675,7 @@ const WorkOrders = () => {
         title={workOrderMode === 'edit' ? 'Edit Work Order' : 'New Work Order'}
         size="xl"
       >
-        <div className="space-y-6">
+        <Stack spacing={3}>
           <Stack spacing={2}>
             <TextField
               label="What needs to be done? (Required)"
@@ -2701,14 +2764,14 @@ const WorkOrders = () => {
             </FormControl>
           </Stack>
 
-          <div>
+          <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Procedure</Typography>
             <Paper variant="outlined" sx={{ p: 2 }}>
               {createForm.procedure ? (
-                <div>
+                <Box>
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                      <ListChecks className="h-4 w-4 text-gray-500" />
+                      <ListChecks size={18} />
                       <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
                         {getProcedureName(createForm.procedure)}
                       </Typography>
@@ -2734,11 +2797,11 @@ const WorkOrders = () => {
                   </Stack>
 
                   {renderProcedureSteps(createForm.procedure)}
-                </div>
+                </Box>
               ) : (
                 <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center' }}>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <ListChecks className="h-4 w-4 text-gray-500" />
+                    <ListChecks size={18} />
                     <Typography variant="body2" color="text.secondary">
                       Create or attach new Form, Procedure or Checklist
                     </Typography>
@@ -2753,9 +2816,9 @@ const WorkOrders = () => {
                 </Stack>
               )}
             </Paper>
-          </div>
+          </Box>
 
-          <div>
+          <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Assigned To</Typography>
             <FormControl fullWidth>
               <Select
@@ -2772,9 +2835,9 @@ const WorkOrders = () => {
                 ))}
               </Select>
             </FormControl>
-          </div>
+          </Box>
 
-          <div>
+          <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Estimated Time</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
@@ -2798,7 +2861,7 @@ const WorkOrders = () => {
                 />
               </Grid>
             </Grid>
-          </div>
+          </Box>
 
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
@@ -2823,8 +2886,8 @@ const WorkOrders = () => {
             </Grid>
           </Grid>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <Select
                   value={createForm.recurrence}
@@ -2857,8 +2920,8 @@ const WorkOrders = () => {
               </FormControl>
 
               {createForm.recurrence === 'daily' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap gap-2">
+                <Box sx={{ mt: 2 }}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap">
                     {[
                       { key: 'sun', label: 'Sun' },
                       { key: 'mon', label: 'Mon' },
@@ -2870,7 +2933,7 @@ const WorkOrders = () => {
                     ].map((d) => {
                       const selected = (createForm.recurrenceDays || []).includes(d.key);
                       return (
-                        <button
+                        <MuiButton
                           key={d.key}
                           type="button"
                           onClick={() => {
@@ -2880,32 +2943,36 @@ const WorkOrders = () => {
                               return { ...p, recurrenceDays: next };
                             });
                           }}
-                          className={`h-9 w-11 rounded-full text-sm font-medium border transition-colors ${selected ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                          size="small"
+                          variant={selected ? 'contained' : 'outlined'}
                         >
                           {d.label}
-                        </button>
+                        </MuiButton>
                       );
                     })}
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">Repeats every day after completion of this Work Order.</div>
-                </div>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                    Repeats every day after completion of this Work Order.
+                  </Typography>
+                </Box>
               )}
 
               {createForm.recurrence === 'weekly' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                    <span>Every</span>
-                    <input
+                <Box sx={{ mt: 2 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                    <Typography variant="body2" color="text.secondary">Every</Typography>
+                    <TextField
+                      size="small"
                       type="number"
-                      min={1}
+                      inputProps={{ min: 1 }}
                       value={createForm.recurrenceIntervalWeeks}
                       onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceIntervalWeeks: e.target.value }))}
-                      className="w-16 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      sx={{ width: 96 }}
                     />
-                    <span>week on</span>
-                  </div>
+                    <Typography variant="body2" color="text.secondary">week on</Typography>
+                  </Stack>
 
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
                     {[
                       { key: 'sun', label: 'Sun', full: 'Sunday' },
                       { key: 'mon', label: 'Mon', full: 'Monday' },
@@ -2917,7 +2984,7 @@ const WorkOrders = () => {
                     ].map((d) => {
                       const selected = (createForm.recurrenceDays || []).includes(d.key);
                       return (
-                        <button
+                        <MuiButton
                           key={d.key}
                           type="button"
                           onClick={() => {
@@ -2927,15 +2994,16 @@ const WorkOrders = () => {
                               return { ...p, recurrenceDays: next };
                             });
                           }}
-                          className={`h-9 w-11 rounded-full text-sm font-medium border transition-colors ${selected ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                          size="small"
+                          variant={selected ? 'contained' : 'outlined'}
                         >
                           {d.label}
-                        </button>
+                        </MuiButton>
                       );
                     })}
-                  </div>
+                  </Stack>
 
-                  <div className="mt-2 text-xs text-gray-500">
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                     {(() => {
                       const order = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
                       const map = {
@@ -2953,162 +3021,11 @@ const WorkOrders = () => {
                       const dayText = days.length > 0 ? days.join(', ') : 'no days selected';
                       return `Repeats ${intervalText} on ${dayText} after completion of this Work Order.`;
                     })()}
-                  </div>
-                </div>
+                  </Typography>
+                </Box>
               )}
-
-              {createForm.recurrence === 'monthly_by_date' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                    <span>Every</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={createForm.recurrenceIntervalMonths}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceIntervalMonths: e.target.value }))}
-                      className="w-16 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <span>month on the</span>
-                    <select
-                      value={createForm.recurrenceDayOfMonth}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceDayOfMonth: e.target.value }))}
-                      className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">
-                      {(() => {
-                        const day = Math.min(31, Math.max(1, parseInt(String(createForm.recurrenceDayOfMonth || 1), 10) || 1));
-                        const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
-                        const d = new Date(base.getFullYear(), base.getMonth(), day);
-                        try {
-                          return d.toLocaleDateString(undefined, { weekday: 'long' });
-                        } catch {
-                          return '';
-                        }
-                      })()}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 text-xs text-gray-500">
-                    {(() => {
-                      const day = Math.min(31, Math.max(1, parseInt(String(createForm.recurrenceDayOfMonth || 1), 10) || 1));
-                      const interval = Math.max(1, parseInt(String(createForm.recurrenceIntervalMonths || 1), 10) || 1);
-                      const suffix = (n) => {
-                        const mod100 = n % 100;
-                        if (mod100 >= 11 && mod100 <= 13) return 'th';
-                        switch (n % 10) {
-                          case 1: return 'st';
-                          case 2: return 'nd';
-                          case 3: return 'rd';
-                          default: return 'th';
-                        }
-                      };
-                      const ordinal = `${day}${suffix(day)}`;
-                      const intervalText = interval === 1 ? 'every month' : `every ${interval} months`;
-                      const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
-                      const d = new Date(base.getFullYear(), base.getMonth(), day);
-                      const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
-                      return `Repeats ${intervalText} on ${weekday} the ${ordinal} after completion of this Work Order.`;
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {createForm.recurrence === 'monthly_by_weekday' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                    <span>Every</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={createForm.recurrenceIntervalMonths}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceIntervalMonths: e.target.value }))}
-                      className="w-16 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <span>month on the</span>
-                    <select
-                      value={createForm.recurrenceWeekOfMonth}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceWeekOfMonth: e.target.value }))}
-                      className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                    >
-                      <option value={1}>1st</option>
-                      <option value={2}>2nd</option>
-                      <option value={3}>3rd</option>
-                      <option value={4}>4th</option>
-                      <option value={5}>Last</option>
-                    </select>
-                    <select
-                      value={createForm.recurrenceWeekday}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceWeekday: e.target.value }))}
-                      className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                    >
-                      <option value="sun">Sunday</option>
-                      <option value="mon">Monday</option>
-                      <option value="tue">Tuesday</option>
-                      <option value="wed">Wednesday</option>
-                      <option value="thu">Thursday</option>
-                      <option value="fri">Friday</option>
-                      <option value="sat">Saturday</option>
-                    </select>
-                  </div>
-
-                  <div className="mt-2 text-xs text-gray-500">
-                    {(() => {
-                      const interval = Math.max(1, parseInt(String(createForm.recurrenceIntervalMonths || 1), 10) || 1);
-                      const intervalText = interval === 1 ? 'every month' : `every ${interval} months`;
-
-                      const week = Math.min(5, Math.max(1, parseInt(String(createForm.recurrenceWeekOfMonth || 1), 10) || 1));
-                      const weekText = week === 5 ? 'last' : (week === 1 ? '1st' : (week === 2 ? '2nd' : (week === 3 ? '3rd' : '4th')));
-
-                      const weekdayMap = {
-                        sun: 'Sunday',
-                        mon: 'Monday',
-                        tue: 'Tuesday',
-                        wed: 'Wednesday',
-                        thu: 'Thursday',
-                        fri: 'Friday',
-                        sat: 'Saturday',
-                      };
-                      const weekdayKey = String(createForm.recurrenceWeekday || 'mon');
-                      const weekday = weekdayMap[weekdayKey] || 'Monday';
-
-                      return `Repeats ${intervalText} on the ${weekText} ${weekday} of the month after completion of this Work Order.`;
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {createForm.recurrence === 'yearly' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                    <span>Every</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={createForm.recurrenceIntervalYears}
-                      onChange={(e) => setCreateForm((p) => ({ ...p, recurrenceIntervalYears: e.target.value }))}
-                      className="w-16 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <span>year</span>
-                  </div>
-
-                  <div className="mt-2 text-xs text-gray-500">
-                    {(() => {
-                      const interval = Math.max(1, parseInt(String(createForm.recurrenceIntervalYears || 1), 10) || 1);
-                      const intervalText = interval === 1 ? 'every year' : `every ${interval} years`;
-                      const base = createForm.startDate ? new Date(createForm.startDate) : new Date();
-                      const day = base.getDate();
-                      const month = base.toLocaleDateString(undefined, { month: 'long' });
-                      return `Repeats ${intervalText} on ${month} ${day} after completion of this Work Order.`;
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div>
+            </Grid>
+            <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Work Type</Typography>
               <FormControl fullWidth>
                 <Select
@@ -3119,8 +3036,8 @@ const WorkOrders = () => {
                   <MenuItem value="preventive">Preventive</MenuItem>
                 </Select>
               </FormControl>
-            </div>
-          </div>
+            </Grid>
+          </Grid>
 
           <div>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Priority</Typography>
@@ -3209,7 +3126,7 @@ const WorkOrders = () => {
               {saving ? (workOrderMode === 'edit' ? 'Saving…' : 'Creating…') : (workOrderMode === 'edit' ? 'Save' : 'Create')}
             </MuiButton>
           </Stack>
-        </div>
+        </Stack>
       </Modal>
 
       <Modal
@@ -3388,47 +3305,61 @@ const WorkOrders = () => {
         title="Assets"
         size="md"
       >
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                value={assetSearch}
-                onChange={(e) => setAssetSearch(e.target.value)}
-                placeholder="Search"
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
-              />
-            </div>
-            <Button
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              value={assetSearch}
+              onChange={(e) => setAssetSearch(e.target.value)}
+              placeholder="Search"
+              fullWidth
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <MuiButton
+              variant="contained"
+              startIcon={<Plus size={18} />}
               onClick={() => { setShowAddAssetModal(true); resetNewAssetForm(); }}
             >
-              <Plus className="w-4 h-4 mr-2" />
               Add New Asset
-            </Button>
-          </div>
+            </MuiButton>
+          </Stack>
 
-          <div className="border border-gray-200 rounded-md overflow-hidden">
-            <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+          <Paper variant="outlined" sx={{ maxHeight: 320, overflow: 'auto' }}>
+            <List dense disablePadding>
               {assets
-                .filter((a) => (a?.name || '').toLowerCase().includes(assetSearch.toLowerCase()))
+                .filter((a) => String(a?.asset_name || a?.name || '').toLowerCase().includes(assetSearch.toLowerCase()))
                 .map((a) => (
-                  <button
+                  <ListItemButton
                     key={a.id}
-                    type="button"
-                    onClick={() => { setCreateForm((p) => ({ ...p, assetName: a.name })); setShowAssetsModal(false); }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      const label = a.asset_name || a.name || '';
+                      setCreateForm((p) => ({ ...p, assetId: String(a.id), assetName: String(label) }));
+                      setShowAssetsModal(false);
+                    }}
                   >
-                    <div className="font-medium">{a.name}</div>
-                    <div className="text-xs text-gray-500">{a.id}</div>
-                  </button>
+                    <ListItemText
+                      primary={a.asset_name || a.name}
+                      secondary={String(a.id)}
+                      primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                      secondaryTypographyProps={{ variant: 'caption' }}
+                    />
+                  </ListItemButton>
                 ))}
 
-              {assets.filter((a) => (a?.name || '').toLowerCase().includes(assetSearch.toLowerCase())).length === 0 && (
-                <div className="px-3 py-6 text-sm text-gray-500 text-center">No assets found.</div>
-              )}
-            </div>
-          </div>
-        </div>
+              {assets.filter((a) => String(a?.asset_name || a?.name || '').toLowerCase().includes(assetSearch.toLowerCase())).length === 0 ? (
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">No assets found.</Typography>
+                </Box>
+              ) : null}
+            </List>
+          </Paper>
+        </Stack>
       </Modal>
 
       <Modal
@@ -3437,82 +3368,69 @@ const WorkOrders = () => {
         title="Add New Asset"
         size="md"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Asset Name (Required)</label>
-            <input
-              value={newAssetForm.name}
-              onChange={(e) => setNewAssetForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-              placeholder="Start typing..."
-            />
-          </div>
+        <Stack spacing={2.5}>
+          <TextField
+            label="Asset Name"
+            value={newAssetForm.name}
+            onChange={(e) => setNewAssetForm((p) => ({ ...p, name: e.target.value }))}
+            required
+            fullWidth
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-              <div className="relative">
-                <select
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select
+                  displayEmpty
                   value={newAssetForm.locationId}
-                  onChange={(e) => setNewAssetForm((p) => ({ ...p, locationId: e.target.value }))}
-                  className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
+                  onChange={(e) => setNewAssetForm((p) => ({ ...p, locationId: String(e.target.value || '') }))}
                 >
-                  <option value="">None</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
+                  <MenuItem value="">None</MenuItem>
+                  {(locations || []).map((l) => (
+                    <MenuItem key={l.id} value={String(l.id)}>{l.name}</MenuItem>
                   ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <div className="relative">
-                <select
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <Select
                   value={newAssetForm.status}
-                  onChange={(e) => setNewAssetForm((p) => ({ ...p, status: e.target.value }))}
-                  className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
+                  onChange={(e) => setNewAssetForm((p) => ({ ...p, status: String(e.target.value || '') }))}
                 >
-                  <option value="running">Running</option>
-                  <option value="down">Down</option>
-                  <option value="idle">Idle</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-          </div>
+                  <MenuItem value="running">Running</MenuItem>
+                  <MenuItem value="down">Down</MenuItem>
+                  <MenuItem value="idle">Idle</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <input
-              value={newAssetForm.category}
-              onChange={(e) => setNewAssetForm((p) => ({ ...p, category: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-              placeholder="Uncategorized"
-            />
-          </div>
+          <TextField
+            label="Category"
+            value={newAssetForm.category}
+            onChange={(e) => setNewAssetForm((p) => ({ ...p, category: e.target.value }))}
+            fullWidth
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={newAssetForm.description}
-              onChange={(e) => setNewAssetForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-              placeholder="Add a description"
-            />
-          </div>
+          <TextField
+            label="Description"
+            value={newAssetForm.description}
+            onChange={(e) => setNewAssetForm((p) => ({ ...p, description: e.target.value }))}
+            fullWidth
+            multiline
+            minRows={3}
+          />
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setShowAddAssetModal(false); resetNewAssetForm(); }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <MuiButton variant="text" onClick={() => { setShowAddAssetModal(false); resetNewAssetForm(); }}>
               Cancel
-            </Button>
-            <Button onClick={handleCreateAssetFromModal} disabled={!newAssetForm.name.trim()}>
+            </MuiButton>
+            <MuiButton variant="contained" onClick={handleCreateAssetFromModal} disabled={!newAssetForm.name.trim()}>
               Save Asset
-            </Button>
-          </div>
-        </div>
+            </MuiButton>
+          </Stack>
+        </Stack>
       </Modal>
 
       <Modal
@@ -3521,69 +3439,70 @@ const WorkOrders = () => {
         title="Add Procedure"
         size="lg"
       >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                value={procedureSearch}
-                onChange={(e) => setProcedureSearch(e.target.value)}
-                placeholder="Search Procedure Templates"
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
-              />
-            </div>
-            <button
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              value={procedureSearch}
+              onChange={(e) => setProcedureSearch(e.target.value)}
+              placeholder="Search Procedure Templates"
+              fullWidth
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={18} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <MuiButton
               type="button"
+              variant="outlined"
               onClick={() => { setShowCreateProcedureModal(true); resetNewProcedureForm(); }}
-              className="text-sm text-primary-600 hover:text-primary-700"
             >
-              + Create a New Procedure
-            </button>
-          </div>
+              Create New
+            </MuiButton>
+          </Stack>
 
           {(apiProcedures || []).length === 0 ? (
-            <div className="border border-gray-200 rounded-md p-10 bg-white text-center">
-              <div className="mx-auto h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center">
-                <ListChecks className="h-7 w-7 text-primary-600" />
-              </div>
-              <div className="mt-6 text-2xl font-bold text-gray-900">Start adding Procedures</div>
-              <div className="mt-2 text-sm text-gray-600">
-                Press <span className="font-medium text-primary-600">+ Create a New Procedure</span> button above to add your first Procedure.
-              </div>
-            </div>
+            <Paper variant="outlined" sx={{ p: 3 }}>
+              <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center' }}>
+                <ListChecks size={28} />
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>Start adding Procedures</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Press “Create New” to add your first Procedure.
+                </Typography>
+              </Stack>
+            </Paper>
           ) : (
-            <div className="border border-gray-200 rounded-md overflow-hidden">
-              <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+            <Paper variant="outlined" sx={{ maxHeight: 360, overflow: 'auto' }}>
+              <List dense disablePadding>
                 {(apiProcedures || [])
                   .filter((p) => (p?.name || '').toLowerCase().includes(procedureSearch.toLowerCase()))
-                  .map((p) => {
-                    const selected = String(selectedProcedureId) === String(p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setSelectedProcedureId(p.id)}
-                        className={`w-full text-left px-3 py-3 text-sm transition-colors ${selected ? 'bg-transparent border-l-4 border-primary-500' : 'bg-transparent border-l-4 border-transparent'} hover:bg-gray-50/10`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-medium text-gray-900 truncate">{p.name}</div>
-                            <div className="text-xs text-gray-500 truncate">{p.description || '—'}</div>
-                          </div>
-                          <div className={`h-4 w-4 rounded border ${selected ? 'bg-primary-600 border-primary-600' : 'bg-white border-gray-300'}`} />
-                        </div>
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
+                  .map((p) => (
+                    <ListItemButton
+                      key={p.id}
+                      selected={String(selectedProcedureId) === String(p.id)}
+                      onClick={() => setSelectedProcedureId(p.id)}
+                    >
+                      <ListItemText
+                        primary={p.name}
+                        secondary={p.description || '—'}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 700 }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
+                      />
+                    </ListItemButton>
+                  ))}
+              </List>
+            </Paper>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setShowProcedureModal(false); setProcedureSearch(''); setSelectedProcedureId(''); }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <MuiButton variant="text" onClick={() => { setShowProcedureModal(false); setProcedureSearch(''); setSelectedProcedureId(''); }}>
               Cancel
-            </Button>
-            <Button
+            </MuiButton>
+            <MuiButton
+              variant="contained"
               onClick={() => {
                 if (!selectedProcedureId) return;
                 setCreateForm((p) => ({ ...p, procedure: selectedProcedureId }));
@@ -3593,9 +3512,9 @@ const WorkOrders = () => {
               disabled={!selectedProcedureId || (apiProcedures || []).length === 0}
             >
               Add Procedure
-            </Button>
-          </div>
-        </div>
+            </MuiButton>
+          </Stack>
+        </Stack>
       </Modal>
 
       <Modal
@@ -3604,180 +3523,93 @@ const WorkOrders = () => {
         title="Create a New Procedure"
         size="xl"
       >
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Enter Procedure Name</label>
-            <input
-              value={newProcedureForm.name}
-              onChange={(e) => setNewProcedureForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-              placeholder="Procedure name"
-            />
-          </div>
+        <Stack spacing={2.5}>
+          <TextField
+            label="Procedure Name"
+            value={newProcedureForm.name}
+            onChange={(e) => setNewProcedureForm((p) => ({ ...p, name: e.target.value }))}
+            required
+            fullWidth
+          />
 
-          <div>
-            <button
-              type="button"
-              onClick={() => setNewProcedureForm((p) => ({ ...p, description: '' }))}
-              className="text-sm text-primary-600 hover:text-primary-700"
-            >
-              + Add Description
-            </button>
-            {newProcedureForm.description !== null && (
-              <textarea
-                rows={3}
-                value={newProcedureForm.description || ''}
-                onChange={(e) => setNewProcedureForm((p) => ({ ...p, description: e.target.value }))}
-                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                placeholder="Description"
-              />
-            )}
-          </div>
+          <TextField
+            label="Description"
+            value={newProcedureForm.description ?? ''}
+            onChange={(e) => setNewProcedureForm((p) => ({ ...p, description: e.target.value }))}
+            fullWidth
+            multiline
+            minRows={3}
+          />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-12 space-y-4">
-              {(newProcedureForm.fields || []).map((f) => (
-                <div key={f.id} className="border border-gray-200 rounded-md p-4 bg-white">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                    <div className="md:col-span-5">
-                      <input
-                        value={f.name}
-                        readOnly
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                        placeholder="Field Name"
-                      />
-                    </div>
-                    <div className="md:col-span-5">
-                      <div className="relative">
-                        <select
-                          value={f.type}
-                          onChange={(e) => updateProcedureField(f.id, { type: e.target.value })}
-                          className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                        >
-                          {procedureFieldTypes.map((t) => (
-                            <option key={t.key} value={t.key}>{t.label}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      </div>
-                    </div>
-                    <div className="md:col-span-2 flex items-center justify-end gap-3">
-                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <Stack spacing={2}>
+            {(newProcedureForm.fields || []).map((f) => (
+              <Paper key={f.id} variant="outlined" sx={{ p: 2 }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={5}>
+                    <TextField value={f.name} label="Field Name" fullWidth size="small" InputProps={{ readOnly: true }} />
+                  </Grid>
+                  <Grid item xs={12} md={5}>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={f.type}
+                        onChange={(e) => updateProcedureField(f.id, { type: e.target.value })}
+                      >
+                        {procedureFieldTypes.map((t) => (
+                          <MenuItem key={t.key} value={t.key}>{t.label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={2}>
+                    <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', md: 'flex-end' }} alignItems="center">
+                      <label>
                         <input
                           type="checkbox"
                           checked={!!f.required}
                           onChange={(e) => updateProcedureField(f.id, { required: e.target.checked })}
-                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
-                        Required
+                        <span style={{ marginLeft: 8 }}>Required</span>
                       </label>
-                    </div>
-                  </div>
+                    </Stack>
+                  </Grid>
+                </Grid>
 
-                  {f.type === 'text' && (
-                    <div className="mt-3">
-                      <textarea
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                        placeholder="Text will be entered here"
-                        readOnly
-                      />
-                    </div>
-                  )}
-
-                  {f.type === 'checkbox' && (
-                    <div className="mt-3">
-                      <div className="h-10" />
-                    </div>
-                  )}
-
-                  {f.type === 'number' && (
-                    <div className="mt-3">
-                      <input
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                        placeholder="Number will be entered here"
-                        readOnly
-                      />
-                    </div>
-                  )}
-
-                  {f.type === 'amount' && (
-                    <div className="mt-3">
-                      <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
-                        <div className="px-3 py-2 text-gray-600 bg-gray-50">$</div>
-                        <input
-                          className="flex-1 px-3 py-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
-                          placeholder="Amount will be entered here"
-                          readOnly
+                {(f.type === 'multiple_choice' || f.type === 'checklist') ? (
+                  <Stack spacing={1.5} sx={{ mt: 2 }}>
+                    {(Array.isArray(f.options) ? f.options : []).map((o) => (
+                      <Stack key={o.id} direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          value={o.label}
+                          onChange={(e) => updateFieldOption(f.id, o.id, e.target.value)}
+                          placeholder="Option"
+                          fullWidth
+                          size="small"
                         />
-                      </div>
-                    </div>
-                  )}
+                        <MuiButton variant="text" color="error" onClick={() => removeFieldOption(f.id, o.id)}>
+                          Remove
+                        </MuiButton>
+                      </Stack>
+                    ))}
+                    <MuiButton variant="outlined" onClick={() => addFieldOption(f.id)}>
+                      Add Option
+                    </MuiButton>
+                  </Stack>
+                ) : null}
+              </Paper>
+            ))}
+          </Stack>
 
-                  {(f.type === 'multiple_choice' || f.type === 'checklist') && (
-                    <div className="mt-3 space-y-2">
-                      {(Array.isArray(f.options) ? f.options : []).map((o) => (
-                        <div key={o.id} className="flex items-center gap-2">
-                          <div className="text-gray-400 select-none">⋮⋮</div>
-                          <input
-                            value={o.label}
-                            onChange={(e) => updateFieldOption(f.id, o.id, e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
-                            placeholder="Option"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeFieldOption(f.id, o.id)}
-                            className="text-gray-400 hover:text-gray-600"
-                            title="Remove"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addFieldOption(f.id)}
-                        className="text-sm text-primary-600 hover:text-primary-700"
-                      >
-                        + Add Option
-                      </button>
-                    </div>
-                  )}
-
-                  {f.type === 'inspection_check' && (
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      {[
-                        { key: 'Pass', color: 'text-green-600' },
-                        { key: 'Flag', color: 'text-orange-600' },
-                        { key: 'Fail', color: 'text-red-600' },
-                      ].map((x) => (
-                        <div
-                          key={x.key}
-                          className={`px-3 py-2 border border-gray-300 rounded-md text-sm text-center bg-white ${x.color}`}
-                        >
-                          {x.key}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setShowCreateProcedureModal(false); resetNewProcedureForm(); }}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <MuiButton variant="text" onClick={() => { setShowCreateProcedureModal(false); resetNewProcedureForm(); }}>
               Cancel
-            </Button>
-            <Button onClick={handleCreateProcedureFromModal} disabled={!newProcedureForm.name.trim()}>
+            </MuiButton>
+            <MuiButton variant="contained" onClick={handleCreateProcedureFromModal} disabled={!newProcedureForm.name.trim()}>
               Add Procedure
-            </Button>
-          </div>
-        </div>
+            </MuiButton>
+          </Stack>
+        </Stack>
       </Modal>
-    </div>
+    </Stack>
   );
 };
 

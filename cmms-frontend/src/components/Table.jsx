@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronUp, ChevronDown, MoreHorizontal } from 'lucide-react';
+import {
+  Box,
+  CircularProgress,
+  Paper,
+  Table as MuiTable,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 
 const Table = ({ 
   columns, 
@@ -81,82 +93,85 @@ const Table = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
+      <Box sx={{ py: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={28} />
+      </Box>
     );
   }
 
   return (
-    <div className={`overflow-x-auto ${className}`}>
-      <table className="min-w-full divide-y divide-gray-200 select-none">
-        <thead className="bg-gray-50">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className={`
-                  px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-                  ${sortable && column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
-                `}
-                onClick={() => handleSort(column)}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>{column.title}</span>
-                  {sortable && column.sortable && (
-                    <div className="flex flex-col">
-                      <ChevronUp 
-                        className={`w-3 h-3 -mb-1 ${
-                          sortConfig.key === column.key && sortConfig.direction === 'asc'
-                            ? 'text-primary-600'
-                            : 'text-gray-400'
-                        }`}
-                      />
-                      <ChevronDown 
-                        className={`w-3 h-3 ${
-                          sortConfig.key === column.key && sortConfig.direction === 'desc'
-                            ? 'text-primary-600'
-                            : 'text-gray-400'
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+    <TableContainer component={Paper} variant="outlined" className={className}>
+      <MuiTable size="small">
+        <TableHead>
+          <TableRow>
+            {columns.map((column) => {
+              const canSort = Boolean(sortable && column.sortable);
+              const activeAsc = sortConfig.key === column.key && sortConfig.direction === 'asc';
+              const activeDesc = sortConfig.key === column.key && sortConfig.direction === 'desc';
+              return (
+                <TableCell
+                  key={column.key}
+                  onClick={() => handleSort(column)}
+                  sx={{
+                    fontWeight: 800,
+                    cursor: canSort ? 'pointer' : 'default',
+                    userSelect: 'none',
+                    '&:hover': canSort ? { bgcolor: 'action.hover' } : undefined,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.06em' }}>
+                      {column.title}
+                    </Typography>
+                    {canSort ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                        <ChevronUp size={14} color={activeAsc ? '#2563eb' : '#9ca3af'} />
+                        <ChevronDown size={14} color={activeDesc ? '#2563eb' : '#9ca3af'} />
+                      </Box>
+                    ) : null}
+                  </Box>
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        </TableHead>
+
+        <TableBody>
           {sortedData.map((row, index) => (
-            <motion.tr
+            <TableRow
               key={row.id || index}
+              component={motion.tr}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2, delay: index * 0.05 }}
-              className={`
-                ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-              `}
+              hover={Boolean(onRowClick)}
               onMouseDown={(e) => {
                 if (onRowClick) e.preventDefault();
               }}
               onClick={() => onRowClick && onRowClick(row)}
+              sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
             >
               {columns.map((column) => (
-                <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {renderCell(column, row, index)}
-                </td>
+                <TableCell key={column.key} sx={{ whiteSpace: 'nowrap' }}>
+                  <Typography variant="body2">
+                    {renderCell(column, row, index)}
+                  </Typography>
+                </TableCell>
               ))}
-            </motion.tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-      
-      {data.length === 0 && !loading && (
-        <div className="text-center py-12 text-gray-500">
-          No data available
-        </div>
-      )}
-    </div>
+        </TableBody>
+      </MuiTable>
+
+      {data.length === 0 && !loading ? (
+        <Box sx={{ py: 6, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
+      ) : null}
+    </TableContainer>
   );
 };
 

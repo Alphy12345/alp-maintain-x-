@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Trash2, Plus } from 'lucide-react';
 import Button from '../components/Button';
+import {
+  Box,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 const AutomationCreate = () => {
   const navigate = useNavigate();
@@ -23,129 +36,132 @@ const AutomationCreate = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <button
-          type="button"
-          onClick={() => navigate('/automations')}
-          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ChevronLeft className="w-4 h-4" />
+    <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2.5 }}>
+        <Button variant="text" onClick={() => navigate('/automations')}>
+          <ChevronLeft size={16} style={{ marginRight: 8 }} />
           New Automation
-        </button>
-
-        <Button type="submit" form="automation-create-form">
-          Create
         </Button>
-      </div>
 
-      <form id="automation-create-form" onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <input
-            type="text"
+        <Button type="submit" form="automation-create-form">Create</Button>
+      </Stack>
+
+      <Box component="form" id="automation-create-form" onSubmit={handleSubmit}>
+        <Stack spacing={2.5}>
+          <TextField
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
             placeholder="Automation name (Required)"
-            className="w-full border-b border-gray-300 px-2 py-3 text-sm focus:outline-none focus:border-primary-500"
+            fullWidth
+            size="small"
           />
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-          <textarea
+          <TextField
+            label="Description"
             name="description"
             value={formData.description}
             onChange={handleChange}
-            rows={3}
+            multiline
+            minRows={3}
             placeholder="What will this automation do?"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            fullWidth
+            size="small"
           />
-        </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Trigger</h3>
-          </div>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+              Trigger
+            </Typography>
+            <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5, bgcolor: 'primary.50' }}>
+                <Typography variant="body2" sx={{ fontWeight: 800 }}>When: Meter Reading</Typography>
+                <IconButton size="small" title="Remove">
+                  <Trash2 size={16} />
+                </IconButton>
+              </Stack>
+              <Divider />
 
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between bg-blue-50 px-4 py-3">
-              <div className="text-sm font-medium text-gray-900">When: Meter Reading</div>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+              <Box sx={{ p: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                      Asset
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <Select name="triggerAsset" value={formData.triggerAsset} onChange={handleChange} displayEmpty>
+                        <MenuItem value="">Start typing...</MenuItem>
+                        <MenuItem value="asset1">Asset 1</MenuItem>
+                        <MenuItem value="asset2">Asset 2</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Asset</label>
-                <select
-                  name="triggerAsset"
-                  value={formData.triggerAsset}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Start typing...</option>
-                  <option value="asset1">Asset 1</option>
-                  <option value="asset2">Asset 2</option>
-                </select>
-              </div>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
+                      Meter
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        name="triggerMeter"
+                        value={formData.triggerMeter}
+                        onChange={handleChange}
+                        displayEmpty
+                        required
+                      >
+                        <MenuItem value="">Start typing...</MenuItem>
+                        <MenuItem value="meter1">Meter 1</MenuItem>
+                        <MenuItem value="meter2">Meter 2</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Box>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">
-                  Meter <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="triggerMeter"
-                  value={formData.triggerMeter}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Start typing...</option>
-                  <option value="meter1">Meter 1</option>
-                  <option value="meter2">Meter 2</option>
-                </select>
-              </div>
-            </div>
+              <Divider />
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Button type="button" variant="text">
+                  <Plus size={16} style={{ marginRight: 8 }} />
+                  Add Trigger
+                </Button>
+              </Box>
+            </Paper>
+          </Box>
 
-            <div className="border-t border-gray-200 px-4 py-3">
-              <button type="button" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                <Plus className="w-4 h-4" />
-                Add Trigger
-              </button>
-            </div>
-          </div>
-        </div>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+              Conditions
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Button type="button" variant="text">
+                <Plus size={16} style={{ marginRight: 8 }} />
+                Add Condition
+              </Button>
+            </Paper>
+          </Box>
 
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">Conditions</h3>
-          <div className="border border-gray-200 rounded-lg px-4 py-3">
-            <button type="button" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-              <Plus className="w-4 h-4" />
-              Add Condition
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">Actions</h3>
-
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <button type="button" className="w-full px-4 py-3 text-left text-sm text-primary-700 hover:bg-gray-50 border-b border-gray-200">
-              Create a Work Order
-            </button>
-            <button type="button" className="w-full px-4 py-3 text-left text-sm text-primary-700 hover:bg-gray-50 border-b border-gray-200">
-              Change Asset Status
-            </button>
-            <button type="button" className="w-full px-4 py-3 text-left text-sm text-primary-700 hover:bg-gray-50">
-              Send a Notification
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+              Actions
+            </Typography>
+            <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+              <Button type="button" variant="text" fullWidth>
+                Create a Work Order
+              </Button>
+              <Divider />
+              <Button type="button" variant="text" fullWidth>
+                Change Asset Status
+              </Button>
+              <Divider />
+              <Button type="button" variant="text" fullWidth>
+                Send a Notification
+              </Button>
+            </Paper>
+          </Box>
+        </Stack>
+      </Box>
+    </Box>
   );
 };
 

@@ -2,71 +2,62 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PackagePlus } from 'lucide-react';
 import { Button } from '../components';
+import { Box, Stack, Tab, Tabs, Typography } from '@mui/material';
 
 const AssetPackages = () => {
   const [tab, setTab] = useState('custom');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Asset Packages</h1>
-        <p className="text-sm text-gray-600 mt-1">Discover, install, and manage packages for your Assets.</p>
-      </div>
+    <Stack spacing={3}>
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>Asset Packages</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Discover, install, and manage packages for your Assets.
+        </Typography>
+      </Box>
 
-      <div className="border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 flex">
-            <button
-              type="button"
-              onClick={() => setTab('custom')}
-              className={`flex-1 text-sm py-3 border-b-2 ${
-                tab === 'custom'
-                  ? 'border-primary-600 text-primary-700 font-medium'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Custom Packages
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('hub')}
-              className={`flex-1 text-sm py-3 border-b-2 ${
-                tab === 'hub'
-                  ? 'border-primary-600 text-primary-700 font-medium'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Asset Hub Packages
-            </button>
-          </div>
-        </div>
-      </div>
+      <Tabs value={tab} onChange={(_e, v) => setTab(v)} variant="fullWidth">
+        <Tab value="custom" label="Custom Packages" />
+        <Tab value="hub" label="Asset Hub Packages" />
+      </Tabs>
 
-      <div className="min-h-[55vh] flex items-center justify-center">
+      <Box sx={{ minHeight: '55vh', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2 }}>
         {tab === 'custom' ? (
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center">
-              <PackagePlus className="h-7 w-7 text-primary-600" />
-            </div>
-            <div>
-              <div className="text-sm text-gray-900 font-medium">You don't have any packages created yet.</div>
-              <div className="text-xs text-gray-500 mt-1">
+          <Stack spacing={2} alignItems="center" textAlign="center">
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: '999px',
+                bgcolor: 'primary.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <PackagePlus size={24} />
+            </Box>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                You don't have any packages created yet.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                 Packages created by your organization, available to reinstall anytime.
-              </div>
-            </div>
-            <Button>
-              Create Package from Asset
-            </Button>
-          </div>
+              </Typography>
+            </Box>
+            <Button>Create Package from Asset</Button>
+          </Stack>
         ) : (
-          <div className="text-sm text-gray-500">Asset Hub Packages placeholder</div>
+          <Typography variant="body2" color="text.secondary">Asset Hub Packages placeholder</Typography>
         )}
-      </div>
+      </Box>
 
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-gray-500">
-        Asset Packages UI is a placeholder layout.
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <Typography variant="caption" color="text.secondary">
+          Asset Packages UI is a placeholder layout.
+        </Typography>
       </motion.div>
-    </div>
+    </Stack>
   );
 };
 
