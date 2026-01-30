@@ -1,14 +1,53 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreVertical, Pencil } from 'lucide-react';
-import { Button } from '../components';
-import useStore from '../store/useStore';
+import { Plus, Search, Pencil } from 'lucide-react';
+import axios from 'axios';
+import {
+  Alert,
+  Box,
+  Button,
+  Grid,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const Locations = () => {
-  const { locations, assets } = useStore();
   const navigate = useNavigate();
-  const [selectedLocationId, setSelectedLocationId] = useState(locations?.[0]?.id || '');
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchLocations = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await axios.get(`${API_BASE_URL}/locations`, {
+        headers: { accept: 'application/json' },
+      });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setLocations(rows);
+      if (!selectedLocationId && rows[0]?.id) setSelectedLocationId(rows[0].id);
+    } catch (e) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to load locations');
+      setLocations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   const filteredLocations = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -25,162 +64,195 @@ const Locations = () => {
     return found || (locations || [])[0] || null;
   }, [locations, selectedLocationId]);
 
-  const childLocations = useMemo(() => {
-    if (!selectedLocation) return [];
-    return (locations || []).filter((l) => l.parentId === selectedLocation.id);
-  }, [locations, selectedLocation]);
-
   const assetsAtLocation = useMemo(() => {
     if (!selectedLocation) return [];
-    return (assets || []).filter((a) => a.locationId === selectedLocation.id);
-  }, [assets, selectedLocation]);
+    return Array.isArray(selectedLocation.assets) ? selectedLocation.assets : [];
+  }, [selectedLocation]);
+
+  const handleDelete = async (locationId) => {
+    const ok = window.confirm('Delete this location?');
+    if (!ok) return;
+    setError('');
+    try {
+      await axios.delete(`${API_BASE_URL}/locations/${locationId}`, {
+        headers: { accept: '*/*' },
+      });
+      if (selectedLocationId === locationId) setSelectedLocationId('');
+      await fetchLocations();
+    } catch (e) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to delete location');
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search Locations"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm"
-            />
-          </div>
-          <Button onClick={() => navigate('/locations/create')} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+            Locations
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Create and manage locations, teams in charge, and assigned assets.
+          </Typography>
+        </Box>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search Locations"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button variant="contained" onClick={() => navigate('/locations/create')} startIcon={<Plus size={18} />}>
             New Location
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="flex items-center gap-2">
-        <button type="button" className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50">
-          Teams in Charge
-        </button>
-        <button type="button" className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50">
-          Asset
-        </button>
-        <button type="button" className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50">
-          Part
-        </button>
-        <button type="button" className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50">
-          Procedure
-        </button>
-      </div>
+      {error ? (
+        <Alert severity="error" action={(
+          <Button color="inherit" size="small" onClick={() => fetchLocations()}>
+            Retry
+          </Button>
+        )}>
+          {error}
+        </Alert>
+      ) : null}
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <div className="text-xs text-gray-500">Sort By: Name, Ascending Order</div>
-          </div>
-          <div className="divide-y divide-gray-200">
-            {(filteredLocations || []).map((l) => {
-              const active = l.id === (selectedLocation?.id || selectedLocationId);
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => setSelectedLocationId(l.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 ${
-                    active ? 'bg-blue-50 border-l-4 border-primary-600' : ''
-                  }`}
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} lg={4}>
+          <Paper variant="outlined" sx={{ minHeight: 640 }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                Locations
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {loading ? 'Loading…' : `${filteredLocations.length} location(s)`}
+              </Typography>
+            </Box>
+
+            <List disablePadding>
+              {(filteredLocations || []).map((l) => {
+                const active = l.id === (selectedLocation?.id || selectedLocationId);
+                return (
+                  <ListItemButton
+                    key={l.id}
+                    selected={active}
+                    onClick={() => setSelectedLocationId(l.id)}
+                    sx={{ py: 1.25 }}
+                  >
+                    <ListItemText
+                      primary={l.name}
+                      secondary={l.address || ''}
+                      primaryTypographyProps={{ fontWeight: 700, noWrap: true }}
+                      secondaryTypographyProps={{ noWrap: true }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+
+              {(!loading && (filteredLocations || []).length === 0) ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">No locations found</Typography>
+                </Box>
+              ) : null}
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} lg={8}>
+          <Paper variant="outlined" sx={{ minHeight: 640, display: 'flex', flexDirection: 'column' }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 900 }} noWrap>
+                  {selectedLocation?.name || 'Location'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {selectedLocation?.address || ''}
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Pencil size={18} />}
+                  onClick={() => selectedLocation?.id && navigate(`/locations/${selectedLocation.id}/edit`)}
+                  disabled={!selectedLocation?.id}
                 >
-                  <div className={`w-8 h-8 rounded-md flex items-center justify-center border ${
-                    active ? 'bg-white border-blue-200' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="w-2 h-2 rounded-full bg-primary-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{l.name}</div>
-                    {l.address ? (
-                      <div className="text-xs text-gray-500 truncate">{l.address}</div>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            })}
-            {(filteredLocations || []).length === 0 && (
-              <div className="px-4 py-10 text-sm text-gray-500 text-center">No locations found</div>
-            )}
-          </div>
-        </div>
+                  Edit
+                </Button>
+                <Button
+                  color="error"
+                  variant="outlined"
+                  onClick={() => selectedLocation?.id && handleDelete(selectedLocation.id)}
+                  disabled={!selectedLocation?.id}
+                >
+                  Delete
+                </Button>
+              </Stack>
+            </Stack>
 
-        <div className="col-span-12 lg:col-span-8 bg-white rounded-lg border border-gray-200 min-h-[640px] flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div className="text-sm font-semibold text-gray-900">{selectedLocation?.name || 'Location'}</div>
-            <div className="flex items-center gap-2">
-              <button type="button" className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </button>
-              <button type="button" className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                <MoreVertical className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            <Box sx={{ p: 2, flex: 1 }}>
+              <Stack spacing={2.5}>
+                <Box>
+                  <Typography variant="overline" color="text.secondary">Description</Typography>
+                  <Typography variant="body2">{selectedLocation?.description || '-'}</Typography>
+                </Box>
 
-          <div className="px-6 py-4 flex-1">
-            <div className="text-sm font-semibold text-gray-900">General</div>
-            <div className="mt-3">
-              <div className="text-xs font-medium text-gray-500">Description</div>
-              <div className="mt-1 text-sm text-gray-600">
-                {selectedLocation?.description ||
-                  'This is the default location. When you create assets or parts without assigning a location, they will be placed here.'}
-              </div>
-            </div>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="overline" color="text.secondary">Team in Charge</Typography>
+                    <Typography variant="body2">{selectedLocation?.team?.team_name || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="overline" color="text.secondary">Vendor</Typography>
+                    <Typography variant="body2">
+                      {(selectedLocation?.vendors || []).length
+                        ? (selectedLocation.vendors || []).map((v) => v.name).join(', ')
+                        : '-'}
+                    </Typography>
+                  </Grid>
+                </Grid>
 
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <div className="text-xs font-medium text-gray-500">Sub-Locations ({childLocations.length})</div>
-              <div className="mt-2 text-sm text-gray-600">Add sub elements inside this Location</div>
-              <button type="button" className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium">
-                Create Sub-Location
-              </button>
-            </div>
-
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <div className="text-xs text-gray-500">
-                Created By{' '}
-                <span className="text-gray-700 font-medium">Account</span>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <div className="text-xs font-medium text-gray-500">Assets ({assetsAtLocation.length})</div>
-              {assetsAtLocation.length === 0 ? (
-                <div className="mt-2 text-sm text-gray-600">No assets assigned to this location</div>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {assetsAtLocation.slice(0, 5).map((a) => (
-                    <div key={a.id} className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-md">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">{a.name}</div>
-                        <div className="text-xs text-gray-500 truncate">{a.category}</div>
-                      </div>
-                      <div className="text-xs text-gray-500">{a.status}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-center">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-full text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Use in New Work Order
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+                <Box>
+                  <Typography variant="overline" color="text.secondary">Assets ({assetsAtLocation.length})</Typography>
+                  {assetsAtLocation.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">No assets assigned to this location</Typography>
+                  ) : (
+                    <Paper variant="outlined" sx={{ mt: 1 }}>
+                      <List disablePadding>
+                        {assetsAtLocation.slice(0, 10).map((a) => (
+                          <ListItemButton
+                            key={a.id}
+                            disabled
+                            sx={{ '&.Mui-disabled': { opacity: 1 }, py: 1.25 }}
+                          >
+                            <ListItemText
+                              primary={a.asset_name}
+                              secondary={[a.asset_type || '', a.status || ''].filter(Boolean).join(' • ')}
+                              primaryTypographyProps={{ fontWeight: 700, noWrap: true }}
+                              secondaryTypographyProps={{ noWrap: true }}
+                            />
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    </Paper>
+                  )}
+                </Box>
+              </Stack>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 };
 

@@ -996,7 +996,9 @@ const Reporting = () => {
             ) : exportSection === 'part_transactions' ? (
               <Card>
                 <CardHeader>
-                  <div className="text-sm font-semibold text-gray-900">Part Transactions</div>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Part Transactions
+                  </Typography>
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3} sx={{ maxWidth: 720 }}>
@@ -1083,7 +1085,9 @@ const Reporting = () => {
             ) : exportSection === 'vendors' ? (
               <Card>
                 <CardHeader>
-                  <div className="text-sm font-semibold text-gray-900">Export Vendor List</div>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Export Vendor List
+                  </Typography>
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3} sx={{ maxWidth: 720 }}>
@@ -1140,16 +1144,20 @@ const Reporting = () => {
             ) : (
               <Card>
                 <CardHeader>
-                  <h3 className="text-lg font-semibold text-gray-900">{[
-                    { id: 'assets', label: 'Assets' },
-                    { id: 'asset_status', label: 'Asset Status' },
-                    { id: 'parts', label: 'Parts' },
-                    { id: 'part_transactions', label: 'Part Transactions' },
-                    { id: 'vendors', label: 'Vendors' },
-                  ].find((x) => x.id === exportSection)?.label}</h3>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {[
+                      { id: 'assets', label: 'Assets' },
+                      { id: 'asset_status', label: 'Asset Status' },
+                      { id: 'parts', label: 'Parts' },
+                      { id: 'part_transactions', label: 'Part Transactions' },
+                      { id: 'vendors', label: 'Vendors' },
+                    ].find((x) => x.id === exportSection)?.label}
+                  </Typography>
                 </CardHeader>
                 <CardBody>
-                  <div className="text-sm text-gray-600">Send the screenshots for this export section and I’ll match it exactly like Work Orders.</div>
+                  <Typography variant="body2" color="text.secondary">
+                    Send the screenshots for this export section and I’ll match it exactly like Work Orders.
+                  </Typography>
                 </CardBody>
               </Card>
             )}

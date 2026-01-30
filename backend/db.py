@@ -66,6 +66,12 @@ def init_db():
         if _table_exists(conn, "assets"):
             if not _column_exists(conn, "assets", "status"):
                 conn.execute(text("ALTER TABLE assets ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'running'"))
+            if not _column_exists(conn, "assets", "location_id"):
+                conn.execute(text("ALTER TABLE assets ADD COLUMN location_id INTEGER"))
+
+        if _table_exists(conn, "locations"):
+            if not _column_exists(conn, "locations", "description"):
+                conn.execute(text("ALTER TABLE locations ADD COLUMN description TEXT"))
 
         if _table_exists(conn, "work_orders"):
             if not _column_exists(conn, "work_orders", "vendor_id"):

@@ -72,6 +72,24 @@ class TeamUpdate(BaseModel):
     description: Optional[str] = None
 
 
+class LocationCreate(BaseModel):
+    name: str
+    address: Optional[str] = None
+    description: Optional[str] = None
+    team_id: Optional[int] = None
+    vendor_ids: List[int] = []
+    asset_ids: List[int] = []
+
+
+class LocationUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    description: Optional[str] = None
+    team_id: Optional[int] = None
+    vendor_ids: Optional[List[int]] = None
+    asset_ids: Optional[List[int]] = None
+
+
 class UserCreate(BaseModel):
     user_name: str
     password: str

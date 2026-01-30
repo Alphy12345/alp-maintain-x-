@@ -14,6 +14,20 @@ class VendorOut(BaseModel):
         from_attributes = True
 
 
+class LocationOut(BaseModel):
+    id: int
+    name: str
+    address: Optional[str] = None
+    description: Optional[str] = None
+    team_id: Optional[int] = None
+    team: Optional["TeamOut"] = None
+    vendors: List[VendorOut] = []
+    assets: List["AssetOut"] = []
+
+    class Config:
+        from_attributes = True
+
+
 class TeamUserOut(BaseModel):
     id: int
     team_id: int

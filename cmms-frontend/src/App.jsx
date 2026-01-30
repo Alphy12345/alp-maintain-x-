@@ -12,6 +12,8 @@ import InviteUsers from './pages/InviteUsers.jsx';
 import Vendors from './pages/Vendors.jsx';
 import VendorCreate from './pages/VendorCreate.jsx';
 import OutputData from './pages/OutputData.jsx';
+import Locations from './pages/Locations.jsx';
+import LocationCreate from './pages/LocationCreate.jsx';
 
 function App() {
   return (
@@ -38,8 +40,9 @@ function App() {
           <Route path="/meters" element={<Navigate to="/work-orders" replace />} />
           <Route path="/automations" element={<Navigate to="/work-orders" replace />} />
           <Route path="/automations/create" element={<Navigate to="/work-orders" replace />} />
-          <Route path="/locations" element={<Navigate to="/work-orders" replace />} />
-          <Route path="/locations/create" element={<Navigate to="/work-orders" replace />} />
+          <Route path="/locations" element={<Locations />} />
+          <Route path="/locations/create" element={<LocationCreate />} />
+          <Route path="/locations/:id/edit" element={<LocationCreate />} />
           <Route path="/settings" element={<Navigate to="/work-orders" replace />} />
           <Route path="/library/asset-packages" element={<Navigate to="/work-orders" replace />} />
           <Route path="/library/work-orders" element={<Navigate to="/work-orders" replace />} />

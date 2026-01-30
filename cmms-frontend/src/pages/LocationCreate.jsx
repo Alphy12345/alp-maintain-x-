@@ -1,178 +1,266 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Paperclip } from 'lucide-react';
-import { Button } from '../components';
-import useStore from '../store/useStore';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
+import {
+  Alert,
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+
+const API_BASE_URL = 'http://172.18.100.31:8000';
 
 const LocationCreate = () => {
   const navigate = useNavigate();
-  const { locations, addLocation } = useStore();
+  const params = useParams();
+  const locationId = params?.id ? parseInt(params.id, 10) : null;
+  const mode = locationId ? 'edit' : 'create';
+
+  const [teams, setTeams] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     description: '',
-    teamsInCharge: '',
-    barcode: '',
-    vendors: '',
-    parentId: '',
+    teamId: '',
+    vendorId: '',
+    assetIds: [],
   });
 
-  const parentOptions = useMemo(() => locations || [], [locations]);
+  const teamOptions = useMemo(() => (Array.isArray(teams) ? teams : []), [teams]);
+  const vendorOptions = useMemo(() => (Array.isArray(vendors) ? vendors : []), [vendors]);
+  const assetOptions = useMemo(() => (Array.isArray(assets) ? assets : []), [assets]);
+
+  React.useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [teamsRes, vendorsRes, assetsRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/teams`, { headers: { accept: 'application/json' } }),
+          axios.get(`${API_BASE_URL}/vendors`, { headers: { accept: 'application/json' } }),
+          axios.get(`${API_BASE_URL}/assets`, { headers: { accept: 'application/json' } }),
+        ]);
+        setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : []);
+        setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
+        setAssets(Array.isArray(assetsRes.data) ? assetsRes.data : []);
+      } catch {
+        setTeams([]);
+        setVendors([]);
+        setAssets([]);
+      }
+    };
+
+    fetchOptions();
+  }, []);
+
+  React.useEffect(() => {
+    const fetchLocation = async () => {
+      if (!locationId) return;
+      setLoading(true);
+      setError('');
+      try {
+        const res = await axios.get(`${API_BASE_URL}/locations/${locationId}`, {
+          headers: { accept: 'application/json' },
+        });
+        const l = res?.data;
+        setFormData({
+          name: l?.name || '',
+          address: l?.address || '',
+          description: l?.description || '',
+          teamId: l?.team_id ? String(l.team_id) : '',
+          vendorId: Array.isArray(l?.vendors) && l.vendors[0]?.id ? String(l.vendors[0].id) : '',
+          assetIds: Array.isArray(l?.assets) ? l.assets.map((a) => String(a.id)) : [],
+        });
+      } catch (e) {
+        setError(e?.response?.data?.detail || e?.message || 'Failed to load location');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLocation();
+  }, [locationId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'assetIds') {
+      const next = Array.isArray(value) ? value : String(value || '').split(',').filter(Boolean);
+      setFormData((p) => ({ ...p, assetIds: next }));
+      return;
+    }
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    addLocation({
-      name: formData.name,
-      address: formData.address,
-      parentId: formData.parentId || undefined,
-      type: 'site',
-    });
-    navigate('/locations');
+    const save = async () => {
+      const name = String(formData.name || '').trim();
+      if (!name) return;
+      setSaving(true);
+      setError('');
+      try {
+        const payload = {
+          name,
+          address: String(formData.address || '').trim() || null,
+          description: String(formData.description || '').trim() || null,
+          team_id: formData.teamId ? parseInt(formData.teamId, 10) : null,
+          vendor_ids: formData.vendorId ? [parseInt(formData.vendorId, 10)] : [],
+          asset_ids: Array.isArray(formData.assetIds)
+            ? formData.assetIds.filter(Boolean).map((id) => parseInt(id, 10))
+            : [],
+        };
+
+        if (mode === 'edit' && locationId) {
+          await axios.patch(`${API_BASE_URL}/locations/${locationId}`, payload, {
+            headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+          });
+        } else {
+          await axios.post(`${API_BASE_URL}/locations`, payload, {
+            headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+          });
+        }
+        navigate('/locations');
+      } catch (err) {
+        setError(err?.response?.data?.detail || err?.message || 'Failed to save location');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    save();
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">New Location</h1>
-      </div>
+    <Stack spacing={2.5} sx={{ maxWidth: 920, mx: 'auto' }}>
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
+          {mode === 'edit' ? 'Edit Location' : 'New Location'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Manage location details and assign a team/vendor.
+        </Typography>
+      </Box>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div>
-          <input
-            type="text"
+      {error ? (
+        <Alert severity="error">{error}</Alert>
+      ) : null}
+
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack component="form" onSubmit={handleSubmit} spacing={2.5}>
+          <TextField
+            label="Location Name"
             name="name"
             value={formData.name}
             onChange={handleChange}
+            disabled={loading || saving}
             required
-            placeholder="Enter Location Name"
-            className="w-full border-b border-gray-300 px-1 py-3 text-sm focus:outline-none focus:border-primary-500"
+            fullWidth
           />
-        </div>
 
-        <div className="border-2 border-dashed border-blue-200 bg-blue-50 rounded-lg p-10 text-center">
-          <div className="flex flex-col items-center">
-            <div className="w-10 h-10 rounded-full bg-white border border-blue-100 flex items-center justify-center">
-              <Camera className="w-5 h-5 text-primary-700" />
-            </div>
-            <div className="mt-2 text-sm text-primary-700">Add or drag pictures</div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Address</label>
-          <input
-            type="text"
+          <TextField
+            label="Address"
             name="address"
             value={formData.address}
             onChange={handleChange}
-            placeholder="Enter address"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            disabled={loading || saving}
+            fullWidth
           />
-        </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Description</label>
-          <textarea
+          <TextField
+            label="Description"
             name="description"
             value={formData.description}
             onChange={handleChange}
-            rows={4}
-            placeholder="Add a description"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            disabled={loading || saving}
+            fullWidth
+            multiline
+            minRows={3}
           />
-        </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Teams in Charge</label>
-          <select
-            name="teamsInCharge"
-            value={formData.teamsInCharge}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            <option value="">Start typing...</option>
-            <option value="team1">Team 1</option>
-            <option value="team2">Team 2</option>
-          </select>
-        </div>
+          <FormControl fullWidth disabled={loading || saving}>
+            <InputLabel id="location-team-label">Team in Charge</InputLabel>
+            <Select
+              labelId="location-team-label"
+              label="Team in Charge"
+              name="teamId"
+              value={formData.teamId}
+              onChange={handleChange}
+            >
+              <MenuItem value="">None</MenuItem>
+              {teamOptions.map((t) => (
+                <MenuItem key={t.id} value={String(t.id)}>
+                  {t.team_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">QR Code/Barcode</label>
-          <input
-            type="text"
-            name="barcode"
-            value={formData.barcode}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <div className="text-sm text-gray-600">
-            or{' '}
-            <button type="button" className="text-primary-600 hover:text-primary-700 font-medium">
-              Generate Code
-            </button>
-          </div>
-        </div>
+          <FormControl fullWidth disabled={loading || saving}>
+            <InputLabel id="location-vendor-label">Vendor</InputLabel>
+            <Select
+              labelId="location-vendor-label"
+              label="Vendor"
+              name="vendorId"
+              value={formData.vendorId}
+              onChange={handleChange}
+            >
+              <MenuItem value="">None</MenuItem>
+              {vendorOptions.map((v) => (
+                <MenuItem key={v.id} value={String(v.id)}>
+                  {v.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Files</label>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 border border-primary-500 text-primary-700 rounded-md text-sm hover:bg-primary-50"
-          >
-            <Paperclip className="w-4 h-4" />
-            Attach files
-          </button>
-        </div>
+          <FormControl fullWidth disabled={loading || saving}>
+            <InputLabel id="location-asset-label">Assets</InputLabel>
+            <Select
+              labelId="location-asset-label"
+              label="Assets"
+              multiple
+              name="assetIds"
+              value={formData.assetIds}
+              onChange={handleChange}
+              renderValue={(selected) => {
+                const ids = Array.isArray(selected) ? selected : [];
+                const byId = new Map(assetOptions.map((a) => [String(a.id), a]));
+                const names = ids
+                  .map((id) => byId.get(String(id))?.asset_name)
+                  .filter(Boolean);
+                return names.join(', ');
+              }}
+            >
+              {assetOptions.map((a) => (
+                <MenuItem key={a.id} value={String(a.id)}>
+                  {a.asset_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Vendors</label>
-          <select
-            name="vendors"
-            value={formData.vendors}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            <option value="">Start typing...</option>
-            <option value="vendor1">Vendor 1</option>
-            <option value="vendor2">Vendor 2</option>
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Parent Location</label>
-          <select
-            name="parentId"
-            value={formData.parentId}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            <option value="">Start typing...</option>
-            {parentOptions.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex justify-end gap-4 pt-6">
-          <button
-            type="button"
-            onClick={() => navigate('/locations')}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Cancel
-          </button>
-          <Button type="submit">Create</Button>
-        </div>
-      </form>
-    </div>
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Button variant="text" onClick={() => navigate('/locations')} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" disabled={loading || saving}>
+              {mode === 'edit' ? 'Save' : 'Create'}
+            </Button>
+          </Stack>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 };
 

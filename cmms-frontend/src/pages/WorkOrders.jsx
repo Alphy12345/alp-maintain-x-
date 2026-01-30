@@ -53,6 +53,7 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
 
 const WorkOrders = () => {
   const { locations, users, currentUser, addUser, addLocation, addAsset, addProcedure, proceduresVersion } = useStore();
+  const [apiLocations, setApiLocations] = useState([]);
   const [assets, setAssets] = useState([]);
   const [teams, setTeams] = useState([]);
   const [teamUsers, setTeamUsers] = useState([]);
@@ -70,19 +71,13 @@ const WorkOrders = () => {
   const [workOrderMode, setWorkOrderMode] = useState('create');
   const [editingWorkOrderId, setEditingWorkOrderId] = useState(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [isDraggingLocationPictures, setIsDraggingLocationPictures] = useState(false);
-  const [locationPicturesInputKey, setLocationPicturesInputKey] = useState(0);
-  const [locationFilesInputKey, setLocationFilesInputKey] = useState(0);
   const [locationForm, setLocationForm] = useState({
     name: '',
     address: '',
     description: '',
-    teamsInCharge: [],
-    barcode: '',
-    vendors: '',
-    parentId: '',
-    pictures: [],
-    files: [],
+    teamId: '',
+    vendorId: '',
+    assetIds: [],
   });
   const [showAssetsModal, setShowAssetsModal] = useState(false);
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
@@ -152,7 +147,7 @@ const WorkOrders = () => {
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
-    locationName: '',
+    locationId: '',
     assetName: '',
     assetId: '',
     procedure: '',
@@ -178,6 +173,8 @@ const WorkOrders = () => {
     vendorId: '',
   });
 
+  const locationsOptions = useMemo(() => (Array.isArray(apiLocations) ? apiLocations : []), [apiLocations]);
+
   const assetsById = useMemo(() => {
     const map = new Map();
     for (const a of assets) map.set(String(a.id), a);
@@ -196,6 +193,15 @@ const WorkOrders = () => {
       setAssets(Array.isArray(res.data) ? res.data : []);
     } catch {
       setAssets([]);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/locations`, { headers: { accept: 'application/json' } });
+      setApiLocations(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setApiLocations([]);
     }
   };
 
@@ -361,6 +367,7 @@ const WorkOrders = () => {
   };
 
   useEffect(() => {
+    fetchLocations();
     fetchAssets();
     fetchTeams();
     fetchCategories();
@@ -438,11 +445,14 @@ const WorkOrders = () => {
   };
 
   const getLocationName = (locationId) => {
+    const idStr = String(locationId ?? '').trim();
+    if (!idStr) return 'Unknown Location';
+    const api = (Array.isArray(apiLocations) ? apiLocations : []).find((l) => String(l?.id) === idStr);
+    if (api?.name) return api.name;
     const list = Array.isArray(locations) ? locations : [];
-    const location = list.find(l => l.id === locationId);
-    if (location?.name) return location.name;
-    if (typeof locationId === 'string' && locationId.trim()) return locationId;
-    return 'Unknown Location';
+    const fallback = list.find(l => String(l?.id) === idStr);
+    if (fallback?.name) return fallback.name;
+    return idStr;
   };
 
   const getAssigneeName = (assigneeId) => {
@@ -1244,7 +1254,7 @@ const WorkOrders = () => {
     setCreateForm({
       title: '',
       description: '',
-      locationName: '',
+      locationId: '',
       assetName: '',
       assetId: '',
       procedure: '',
@@ -1299,11 +1309,14 @@ const WorkOrders = () => {
       }
     };
 
+    const locStr = typeof wo.locationId === 'string' ? wo.locationId : '';
+    const matchByName = (Array.isArray(apiLocations) ? apiLocations : []).find((l) => String(l?.name || '').trim() === String(locStr || '').trim());
+
     setCreateForm((p) => ({
       ...p,
       title: wo.title || '',
       description: wo.description || '',
-      locationName: typeof wo.locationId === 'string' ? wo.locationId : '',
+      locationId: matchByName?.id ? String(matchByName.id) : '',
       assetId: wo.assetId ? String(wo.assetId) : '',
       assetName: wo.assetId ? String(getAssetName(wo.assetId) || '') : '',
       procedure: wo.procedure ? String(wo.procedure) : '',
@@ -1540,16 +1553,10 @@ const WorkOrders = () => {
       name: '',
       address: '',
       description: '',
-      teamsInCharge: [],
-      barcode: '',
-      vendors: '',
-      parentId: '',
-      pictures: [],
-      files: [],
+      teamId: '',
+      vendorId: '',
+      assetIds: [],
     });
-    setIsDraggingLocationPictures(false);
-    setLocationPicturesInputKey((k) => k + 1);
-    setLocationFilesInputKey((k) => k + 1);
   };
 
   const openNewLocationModal = () => {
@@ -1557,86 +1564,47 @@ const WorkOrders = () => {
     setShowLocationModal(true);
   };
 
-  const addLocationPictures = async (fileList) => {
-    const files = Array.from(fileList || []);
-    if (files.length === 0) return;
-    const mapped = await Promise.all(
-      files.map(async (file) => {
-        const dataUrl = await readFileAsDataUrl(file);
-        return {
-          id: `LOC-PIC-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          dataUrl,
-        };
-      })
-    );
-    setLocationForm((p) => ({ ...p, pictures: [...(p.pictures || []), ...mapped] }));
-  };
-
-  const removeLocationPicture = (id) => {
-    setLocationForm((p) => ({ ...p, pictures: (p.pictures || []).filter((x) => x.id !== id) }));
-  };
-
-  const addLocationFiles = async (fileList) => {
-    const files = Array.from(fileList || []);
-    if (files.length === 0) return;
-    const mapped = await Promise.all(
-      files.map(async (file) => {
-        const dataUrl = await readFileAsDataUrl(file);
-        return {
-          id: `LOC-FILE-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          dataUrl,
-        };
-      })
-    );
-    setLocationForm((p) => ({ ...p, files: [...(p.files || []), ...mapped] }));
-  };
-
-  const removeLocationFile = (id) => {
-    setLocationForm((p) => ({ ...p, files: (p.files || []).filter((x) => x.id !== id) }));
-  };
-
-  const handleCreateLocationFromModal = () => {
+  const handleCreateLocationFromModal = async () => {
     const name = String(locationForm.name || '').trim();
     if (!name) return;
-    const created = addLocation({
-      name,
-      type: 'site',
-      address: String(locationForm.address || '').trim() || undefined,
-      description: String(locationForm.description || '').trim() || undefined,
-      teamsInCharge: Array.isArray(locationForm.teamsInCharge) ? locationForm.teamsInCharge : [],
-      barcode: String(locationForm.barcode || '').trim() || undefined,
-      vendors: String(locationForm.vendors || '').trim() || undefined,
-      parentId: String(locationForm.parentId || '').trim() || undefined,
-      pictures: locationForm.pictures || [],
-      files: locationForm.files || [],
-    });
-
-    setCreateForm((p) => ({ ...p, locationName: created?.name || name }));
-    setShowLocationModal(false);
-    resetLocationForm();
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        name,
+        address: String(locationForm.address || '').trim() || null,
+        description: String(locationForm.description || '').trim() || null,
+        team_id: locationForm.teamId ? parseInt(String(locationForm.teamId), 10) : null,
+        vendor_ids: locationForm.vendorId ? [parseInt(String(locationForm.vendorId), 10)] : [],
+        asset_ids: Array.isArray(locationForm.assetIds)
+          ? locationForm.assetIds.filter(Boolean).map((id) => parseInt(String(id), 10))
+          : [],
+      };
+      const res = await axios.post(`${API_BASE_URL}/locations`, payload, {
+        headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+      });
+      const created = res?.data;
+      await fetchLocations();
+      if (created?.id !== undefined && created?.id !== null) {
+        setCreateForm((p) => ({ ...p, locationId: String(created.id) }));
+      }
+      setShowLocationModal(false);
+      resetLocationForm();
+    } catch (e) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to create location');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveWorkOrder = async () => {
     const title = createForm.title.trim();
     if (!title) return;
 
-    const locationName = createForm.locationName.trim();
     const assetId = createForm.assetId ? String(createForm.assetId) : '';
     const teamId = createForm.teamId ? String(createForm.teamId) : '';
 
-    let location = null;
-    if (locationName) {
-      location = (Array.isArray(locations) ? locations : []).find((l) => normalize(l.name) === normalize(locationName)) || null;
-      if (!location) {
-        location = addLocation({ name: locationName, type: 'site' });
-      }
-    }
+    const selectedLocation = (Array.isArray(apiLocations) ? apiLocations : []).find((l) => String(l?.id) === String(createForm.locationId || '')) || null;
 
     const hours = parseInt(createForm.estimatedHours || '0', 10);
     const minutes = parseInt(createForm.estimatedMinutes || '0', 10);
@@ -1671,7 +1639,7 @@ const WorkOrders = () => {
       recurrence: createForm.recurrence,
       work_type: createForm.workType,
       priority: createForm.priority,
-      location: location?.name || locationName,
+      location: selectedLocation?.name || null,
       team_id: teamId ? parseInt(teamId, 10) : null,
       assigned_user_id: Number.isFinite(numericAssigneeId) ? numericAssigneeId : null,
       asset_id: assetId ? parseInt(assetId, 10) : null,
@@ -2669,13 +2637,18 @@ const WorkOrders = () => {
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <Stack spacing={1}>
-                  <TextField
-                    label="Location"
-                    value={createForm.locationName}
-                    onChange={(e) => setCreateForm((p) => ({ ...p, locationName: e.target.value }))}
-                    placeholder="Start typing..."
-                    fullWidth
-                  />
+                  <FormControl fullWidth>
+                    <Select
+                      value={createForm.locationId}
+                      displayEmpty
+                      onChange={(e) => setCreateForm((p) => ({ ...p, locationId: String(e.target.value || '') }))}
+                    >
+                      <MenuItem value="">Select Location</MenuItem>
+                      {locationsOptions.map((l) => (
+                        <MenuItem key={l.id} value={String(l.id)}>{l.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                   <MuiButton type="button" variant="text" onClick={handleAddNewLocation}>
                     Add new location
                   </MuiButton>
@@ -3299,214 +3272,114 @@ const WorkOrders = () => {
         title="New Location"
         size="xl"
       >
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location Name</label>
-            <input
-              value={locationForm.name}
-              onChange={(e) => setLocationForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter Location Name"
-            />
-          </div>
+        <Stack spacing={2.5} sx={{ maxWidth: 920, mx: 'auto' }}>
+          <Typography variant="body2" color="text.secondary">
+            Manage location details and assign a team/vendor.
+          </Typography>
 
-          <div>
-            <input
-              key={locationPicturesInputKey}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                addLocationPictures(e.target.files);
-                e.target.value = '';
-              }}
-              id="location-pictures-input"
-            />
+          {error ? (
+            <Alert severity="error">{error}</Alert>
+          ) : null}
 
-            <div
-              className={`w-full rounded-md border-2 border-dashed p-6 transition-colors ${isDraggingLocationPictures ? 'border-primary-500 bg-primary-50' : 'border-gray-300 bg-gray-50'}`}
-              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingLocationPictures(true); }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingLocationPictures(true); }}
-              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingLocationPictures(false); }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingLocationPictures(false);
-                addLocationPictures(e.dataTransfer.files);
-              }}
-            >
-              <div className="flex flex-col items-center text-center gap-2">
-                <div className="text-sm text-gray-700">Add or drag pictures</div>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('location-pictures-input')?.click()}
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
+          <Paper variant="outlined" sx={{ p: 2.5 }}>
+            <Stack spacing={2.5}>
+              <TextField
+                label="Location Name"
+                value={locationForm.name}
+                onChange={(e) => setLocationForm((p) => ({ ...p, name: e.target.value }))}
+                disabled={saving}
+                required
+                fullWidth
+              />
+
+              <TextField
+                label="Address"
+                value={locationForm.address}
+                onChange={(e) => setLocationForm((p) => ({ ...p, address: e.target.value }))}
+                disabled={saving}
+                fullWidth
+              />
+
+              <TextField
+                label="Description"
+                value={locationForm.description}
+                onChange={(e) => setLocationForm((p) => ({ ...p, description: e.target.value }))}
+                disabled={saving}
+                fullWidth
+                multiline
+                minRows={3}
+              />
+
+              <FormControl fullWidth disabled={saving}>
+                <Select
+                  value={locationForm.teamId}
+                  displayEmpty
+                  onChange={(e) => setLocationForm((p) => ({ ...p, teamId: String(e.target.value || '') }))}
                 >
-                  Choose pictures
-                </button>
-                <div className="text-xs text-gray-500">PNG, JPG, GIF</div>
-              </div>
-            </div>
+                  <MenuItem value="">Team in Charge</MenuItem>
+                  {teams.map((t) => (
+                    <MenuItem key={t.id} value={String(t.id)}>{t.team_name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            {Array.isArray(locationForm.pictures) && locationForm.pictures.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                {locationForm.pictures.map((p) => (
-                  <div key={p.id} className="relative border border-gray-200 rounded-md overflow-hidden bg-white">
-                    <button
-                      type="button"
-                      onClick={() => removeLocationPicture(p.id)}
-                      className="absolute top-1 right-1 h-7 w-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center hover:bg-white"
-                      aria-label="Remove"
-                      title="Remove"
-                    >
-                      <X className="h-4 w-4 text-gray-600" />
-                    </button>
-                    <img src={p.dataUrl} alt={p.name} className="h-24 w-full object-cover" />
-                    <div className="px-2 py-1 text-xs text-gray-700 truncate" title={p.name}>{p.name}</div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
+              <FormControl fullWidth disabled={saving}>
+                <Select
+                  value={locationForm.vendorId}
+                  displayEmpty
+                  onChange={(e) => setLocationForm((p) => ({ ...p, vendorId: String(e.target.value || '') }))}
+                >
+                  <MenuItem value="">Vendor</MenuItem>
+                  {apiVendors.map((v) => (
+                    <MenuItem key={v.id} value={String(v.id)}>{v.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <input
-              value={locationForm.address}
-              onChange={(e) => setLocationForm((p) => ({ ...p, address: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter address"
-            />
-          </div>
+              <FormControl fullWidth disabled={saving}>
+                <Select
+                  multiple
+                  value={locationForm.assetIds}
+                  displayEmpty
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const next = Array.isArray(val) ? val : String(val || '').split(',').filter(Boolean);
+                    setLocationForm((p) => ({ ...p, assetIds: next }));
+                  }}
+                  renderValue={(selected) => {
+                    const ids = Array.isArray(selected) ? selected : [];
+                    const byId = new Map((assets || []).map((a) => [String(a.id), a]));
+                    const names = ids.map((id) => byId.get(String(id))?.asset_name).filter(Boolean);
+                    return names.length ? names.join(', ') : 'Assets';
+                  }}
+                >
+                  {(assets || []).map((a) => (
+                    <MenuItem key={a.id} value={String(a.id)}>{a.asset_name || a.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={locationForm.description}
-              onChange={(e) => setLocationForm((p) => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Add a description"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Teams in Charge</label>
-            <div className="border border-gray-200 rounded-md p-3 bg-white">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {teams.map((t) => {
-                  const checked = (locationForm.teamsInCharge || []).includes(String(t.id));
-                  return (
-                    <label key={t.id} className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          const id = String(t.id);
-                          setLocationForm((p) => {
-                            const cur = Array.isArray(p.teamsInCharge) ? p.teamsInCharge : [];
-                            const next = e.target.checked ? [...cur, id] : cur.filter((x) => x !== id);
-                            return { ...p, teamsInCharge: next };
-                          });
-                        }}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      {t.team_name}
-                    </label>
-                  );
-                })}
-              </div>
-              {teams.length === 0 ? (
-                <div className="text-xs text-gray-500">No teams loaded</div>
-              ) : null}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">QR Code/Barcode</label>
-            <input
-              value={locationForm.barcode}
-              onChange={(e) => setLocationForm((p) => ({ ...p, barcode: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder=""
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Files</label>
-            <input
-              key={locationFilesInputKey}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                addLocationFiles(e.target.files);
-                e.target.value = '';
-              }}
-              id="location-files-input"
-            />
-            <Button variant="secondary" onClick={() => document.getElementById('location-files-input')?.click()}>
-              Attach files
-            </Button>
-
-            {Array.isArray(locationForm.files) && locationForm.files.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {locationForm.files.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 border border-gray-200 rounded-md">
-                    <div className="min-w-0">
-                      <div className="text-sm text-gray-900 truncate">{f.name}</div>
-                      <div className="text-xs text-gray-500">{Math.round((f.size || 0) / 1024)} KB</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeLocationFile(f.id)}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vendors</label>
-            <input
-              value={locationForm.vendors}
-              onChange={(e) => setLocationForm((p) => ({ ...p, vendors: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Start typing..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parent Location</label>
-            <div className="relative">
-              <select
-                value={locationForm.parentId}
-                onChange={(e) => setLocationForm((p) => ({ ...p, parentId: e.target.value }))}
-                className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">None</option>
-                {(Array.isArray(locations) ? locations : []).map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setShowLocationModal(false); resetLocationForm(); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateLocationFromModal} disabled={!String(locationForm.name || '').trim()}>
-              Create
-            </Button>
-          </div>
-        </div>
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <MuiButton
+                  type="button"
+                  variant="text"
+                  onClick={() => { setShowLocationModal(false); resetLocationForm(); }}
+                  disabled={saving}
+                >
+                  Cancel
+                </MuiButton>
+                <MuiButton
+                  type="button"
+                  variant="contained"
+                  onClick={handleCreateLocationFromModal}
+                  disabled={!String(locationForm.name || '').trim() || saving}
+                >
+                  Create
+                </MuiButton>
+              </Stack>
+            </Stack>
+          </Paper>
+        </Stack>
       </Modal>
 
       <Modal

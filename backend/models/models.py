@@ -14,6 +14,32 @@ from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
+
+location_vendors = Table(
+    "location_vendors",
+    Base.metadata,
+    Column("location_id", ForeignKey("locations.id", ondelete="CASCADE"), primary_key=True),
+    Column("vendor_id", ForeignKey("vendors.id", ondelete="CASCADE"), primary_key=True),
+ )
+
+
+# =====================================================
+# Location
+# =====================================================
+class Location(Base):
+    __tablename__ = "locations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    address = Column(String(255))
+    description = Column(Text)
+
+    team_id = Column(Integer, ForeignKey("teams.id"))
+
+    team = relationship("Team")
+    vendors = relationship("Vendor", secondary=location_vendors)
+    assets = relationship("Asset", back_populates="location_ref")
+
 # =====================================================
 # Vendor
 # =====================================================
@@ -45,9 +71,12 @@ class Asset(Base):
     asset_type = Column(String(100))
     status = Column(String(50), nullable=False, default="running")
 
+    location_id = Column(Integer, ForeignKey("locations.id"))
+
     vendor_id = Column(Integer, ForeignKey("vendors.id"))
 
     vendor = relationship("Vendor", back_populates="assets")
+    location_ref = relationship("Location", back_populates="assets")
     work_orders = relationship("WorkOrder", back_populates="asset")
     procedures = relationship(
         "Procedure",
