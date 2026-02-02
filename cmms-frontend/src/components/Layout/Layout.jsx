@@ -26,7 +26,8 @@ const Layout = ({ children }) => {
             minHeight: 0,
             overflow: 'auto',
             pt: { xs: '72px', sm: '72px' },
-            p: { xs: 2, sm: 3 },
+            px: { xs: 2, sm: 3 },
+            pb: { xs: 2, sm: 3 },
           }}
         >
           {children}
