@@ -49,6 +49,7 @@ const useStore = create((set, get) => ({
   darkMode: getInitialDarkMode(),
   currentUser: null,
   proceduresVersion: 0,
+  workOrdersVersion: 0,
 
   // Actions
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
@@ -79,6 +80,7 @@ const useStore = create((set, get) => ({
     const nowIso = new Date().toISOString();
     set((state) => ({
       workOrders: [...state.workOrders, created],
+      workOrdersVersion: (state.workOrdersVersion || 0) + 1,
       activities: [
         {
           id: `ACT-${Date.now()}`,
@@ -306,13 +308,15 @@ const useStore = create((set, get) => ({
 
       return {
         workOrders: next,
+        workOrdersVersion: (state.workOrdersVersion || 0) + 1,
         activities: [activity, ...state.activities],
       };
     });
   },
 
   deleteWorkOrder: (id) => set((state) => ({
-    workOrders: state.workOrders.filter(wo => wo.id !== id)
+    workOrders: state.workOrders.filter(wo => wo.id !== id),
+    workOrdersVersion: (state.workOrdersVersion || 0) + 1,
   })),
 
   // Asset Actions

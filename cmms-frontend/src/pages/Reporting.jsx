@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -45,7 +45,7 @@ import autoTable from 'jspdf-autotable';
 
 const API_BASE_URL = 'http://172.18.100.31:8000';
 
-const EXPORT_SECTIONS = ['work_orders', 'assets', 'asset_status', 'parts', 'part_transactions', 'vendors'];
+const EXPORT_SECTIONS = ['work_orders'];
 
 const normalizeWorkOrderStatus = (raw) => {
   const s = String(raw || '').trim().toLowerCase();
@@ -104,11 +104,13 @@ const Gauge = ({ label, valueText }) => (
 );
 
 const Reporting = () => {
-  const { assets, locations, users, assetHealthEvents, inventory } = useStore();
+  const { assets, locations, users, workOrdersVersion } = useStore();
 
   const [apiWorkOrders, setApiWorkOrders] = useState([]);
   const [loadingWorkOrders, setLoadingWorkOrders] = useState(false);
   const [workOrdersError, setWorkOrdersError] = useState('');
+
+  const [apiAssets, setApiAssets] = useState([]);
 
   const [activeTab, setActiveTab] = useState('work_orders');
   const [exportSection, setExportSection] = useState('work_orders');
@@ -127,8 +129,7 @@ const Reporting = () => {
   });
   const [dateRange, setDateRange] = useState(() => {
     const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 29);
+    const start = new Date('2000-01-01T00:00:00');
     return { start: formatDateForInput(start), end: formatDateForInput(end) };
   });
 
@@ -149,49 +150,154 @@ const Reporting = () => {
   const startDate = useMemo(() => new Date(`${dateRange.start}T00:00:00`), [dateRange.start]);
   const endDate = useMemo(() => new Date(`${dateRange.end}T23:59:59`), [dateRange.end]);
 
+  const fetchWorkOrders = useCallback(async () => {
+    setLoadingWorkOrders(true);
+    setWorkOrdersError('');
+    try {
+      const res = await axios.get(`${API_BASE_URL}/work-orders`, { headers: { accept: 'application/json' } });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      const mapped = rows.map((wo) => {
+        const dueIso = wo?.due_date ? new Date(wo.due_date).toISOString() : null;
+        const startIso = wo?.start_date ? new Date(wo.start_date).toISOString() : null;
+        const createdIso = wo?.created_at ? new Date(wo.created_at).toISOString() : (startIso || null);
+        const completedIso = wo?.completed_at ? new Date(wo.completed_at).toISOString() : null;
+        const assetVal = wo?.asset;
+        const assetObj = assetVal && typeof assetVal === 'object' ? assetVal : null;
+        const assetIdRaw =
+          wo?.asset_id ??
+          wo?.assetId ??
+          wo?.asset_id_fk ??
+          (assetVal && typeof assetVal !== 'object' ? assetVal : null) ??
+          assetObj?.id ??
+          assetObj?.asset_id ??
+          assetObj?.assetId ??
+          null;
+        const assetId = assetIdRaw !== undefined && assetIdRaw !== null ? String(assetIdRaw) : '';
+        const assetName = String(
+          wo?.asset_name ??
+          wo?.assetName ??
+          assetObj?.name ??
+          assetObj?.asset_name ??
+          ''
+        ).trim();
+        const assignedUser = wo?.assigned_user || wo?.assignedUser || null;
+        const assigneeName =
+          assignedUser?.user_name ||
+          assignedUser?.name ||
+          assignedUser?.username ||
+          '';
+        return {
+          id: String(wo?.id ?? ''),
+          title: String(wo?.name ?? ''),
+          description: String(wo?.description ?? ''),
+          createdAt: createdIso,
+          startDate: startIso,
+          dueDate: dueIso,
+          completedAt: completedIso,
+          status: normalizeWorkOrderStatus(wo?.status),
+          priority: String(wo?.priority ?? 'low'),
+          workType: String(wo?.work_type ?? ''),
+          locationId: typeof wo?.location === 'string' ? wo.location : (wo?.location ? String(wo.location) : ''),
+          teamId: wo?.team_id !== undefined && wo?.team_id !== null ? String(wo.team_id) : '',
+          assetId,
+          assetName,
+          vendorId: wo?.vendor_id !== undefined && wo?.vendor_id !== null ? String(wo.vendor_id) : '',
+          procedureId: wo?.procedure_id !== undefined && wo?.procedure_id !== null ? String(wo.procedure_id) : '',
+          recurrence: String(wo?.recurrence ?? 'does_not_repeat'),
+          assigneeId: wo?.assigned_user_id !== undefined && wo?.assigned_user_id !== null ? String(wo.assigned_user_id) : '',
+          assigneeName,
+        };
+      });
+      setApiWorkOrders(mapped);
+    } catch (e) {
+      setWorkOrdersError(e?.response?.data?.detail || e?.message || 'Failed to load work orders');
+      setApiWorkOrders([]);
+    } finally {
+      setLoadingWorkOrders(false);
+    }
+  }, []);
+
+  const fetchAssetsForExport = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/assets`, { headers: { accept: 'application/json' } });
+      setApiAssets(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setApiAssets([]);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchWorkOrders = async () => {
-      setLoadingWorkOrders(true);
-      setWorkOrdersError('');
-      try {
-        const res = await axios.get(`${API_BASE_URL}/work-orders`, { headers: { accept: 'application/json' } });
-        const rows = Array.isArray(res.data) ? res.data : [];
-        const mapped = rows.map((wo) => {
-          const dueIso = wo?.due_date ? new Date(wo.due_date).toISOString() : null;
-          const startIso = wo?.start_date ? new Date(wo.start_date).toISOString() : null;
-          const createdIso = wo?.created_at ? new Date(wo.created_at).toISOString() : (startIso || dueIso || null);
-          const completedIso = wo?.completed_at ? new Date(wo.completed_at).toISOString() : null;
-          return {
-            id: String(wo?.id ?? ''),
-            title: String(wo?.name ?? ''),
-            description: String(wo?.description ?? ''),
-            createdAt: createdIso,
-            startDate: startIso,
-            dueDate: dueIso,
-            completedAt: completedIso,
-            status: normalizeWorkOrderStatus(wo?.status),
-            priority: String(wo?.priority ?? 'low'),
-            workType: String(wo?.work_type ?? ''),
-            locationId: typeof wo?.location === 'string' ? wo.location : (wo?.location ? String(wo.location) : ''),
-            teamId: wo?.team_id !== undefined && wo?.team_id !== null ? String(wo.team_id) : '',
-            assetId: wo?.asset_id !== undefined && wo?.asset_id !== null ? String(wo.asset_id) : '',
-            vendorId: wo?.vendor_id !== undefined && wo?.vendor_id !== null ? String(wo.vendor_id) : '',
-            procedureId: wo?.procedure_id !== undefined && wo?.procedure_id !== null ? String(wo.procedure_id) : '',
-            recurrence: String(wo?.recurrence ?? 'does_not_repeat'),
-            assigneeId: wo?.assigned_user_id !== undefined && wo?.assigned_user_id !== null ? String(wo.assigned_user_id) : '',
-          };
-        });
-        setApiWorkOrders(mapped);
-      } catch (e) {
-        setWorkOrdersError(e?.response?.data?.detail || e?.message || 'Failed to load work orders');
-        setApiWorkOrders([]);
-      } finally {
-        setLoadingWorkOrders(false);
-      }
+    fetchWorkOrders();
+  }, [fetchWorkOrders, workOrdersVersion]);
+
+  useEffect(() => {
+    if (activeTab !== 'export_data') return;
+    if (Array.isArray(assets) && assets.length > 0) return;
+    fetchAssetsForExport();
+  }, [activeTab, assets, fetchAssetsForExport]);
+
+  useEffect(() => {
+    let es;
+    try {
+      es = new EventSource(`${API_BASE_URL}/events/work-orders`);
+      const onWorkOrderEvent = () => {
+        fetchWorkOrders();
+      };
+
+      es.addEventListener('work_order', onWorkOrderEvent);
+
+      return () => {
+        try {
+          es.removeEventListener('work_order', onWorkOrderEvent);
+          es.close();
+        } catch {
+        }
+      };
+    } catch {
+      return undefined;
+    }
+  }, [fetchWorkOrders]);
+
+  const derivedRange = useMemo(() => {
+    const list = Array.isArray(apiWorkOrders) ? apiWorkOrders : [];
+    let min = null;
+    let max = null;
+
+    const push = (iso) => {
+      if (!iso) return;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return;
+      if (!min || d < min) min = d;
+      if (!max || d > max) max = d;
     };
 
-    fetchWorkOrders();
-  }, []);
+    for (const wo of list) {
+      push(wo.createdAt);
+      push(wo.startDate);
+      push(wo.completedAt);
+    }
+
+    const today = new Date();
+    const start = min || new Date('2000-01-01T00:00:00');
+    const end = (!max || max > today) ? today : max;
+    return { start: formatDateForInput(start), end: formatDateForInput(end) };
+  }, [apiWorkOrders]);
+
+  useEffect(() => {
+    setDateRange((prev) => {
+      if (!prev?.start || !prev?.end) return derivedRange;
+      if (prev.start === derivedRange.start && prev.end === derivedRange.end) return prev;
+      const prevStart = new Date(`${prev.start}T00:00:00`);
+      const prevEnd = new Date(`${prev.end}T23:59:59`);
+      const derivedStart = new Date(`${derivedRange.start}T00:00:00`);
+      const derivedEnd = new Date(`${derivedRange.end}T23:59:59`);
+
+      if (prevStart > derivedStart || prevEnd < derivedEnd) {
+        return derivedRange;
+      }
+      return prev;
+    });
+  }, [derivedRange.start, derivedRange.end]);
 
   const exportDateRangeText = useMemo(() => {
     const s = exportForm.start || dateRange.start;
@@ -270,9 +376,25 @@ const Reporting = () => {
   };
 
   const buildExportRows = () => {
-    const assetName = (id) => assets.find((a) => a.id === id)?.name || '';
-    const locationName = (id) => locations.find((l) => l.id === id)?.name || '';
-    const userName = (id) => users.find((u) => u.id === id)?.name || '';
+    const assetList = (Array.isArray(assets) && assets.length > 0) ? assets : (Array.isArray(apiAssets) ? apiAssets : []);
+    const assetName = (id) => assetList.find((a) => (
+      String(a?.id ?? '') === String(id ?? '') ||
+      String(a?.asset_id ?? '') === String(id ?? '') ||
+      String(a?.assetId ?? '') === String(id ?? '')
+    ))?.name || assetList.find((a) => (
+      String(a?.id ?? '') === String(id ?? '') ||
+      String(a?.asset_id ?? '') === String(id ?? '') ||
+      String(a?.assetId ?? '') === String(id ?? '')
+    ))?.asset_name || '';
+    const locationName = (id) => locations.find((l) => String(l?.id ?? '') === String(id ?? ''))?.name || '';
+    const userName = (id) => users.find((u) => String(u?.id ?? '') === String(id ?? ''))?.name || '';
+    const assigneeName = (wo) => {
+      if (wo?.assigneeName) return String(wo.assigneeName);
+      const fromUsers = userName(wo?.assigneeId);
+      if (fromUsers) return fromUsers;
+      const fromOptions = assigneeOptions.find((o) => String(o.id) === String(wo?.assigneeId))?.name || '';
+      return String(fromOptions || wo?.assigneeId || '');
+    };
 
     if (exportSection === 'work_orders') {
       const list = (apiWorkOrders || []).filter((wo) => exportInRange(wo.createdAt));
@@ -286,64 +408,11 @@ const Reporting = () => {
         Title: wo.title,
         Status: wo.status,
         Priority: wo.priority,
-        Asset: assetName(wo.assetId),
-        Location: locationName(wo.locationId),
-        AssignedTo: userName(wo.assigneeId),
+        Asset: assetName(wo.assetId) || String(wo.assetName || ''),
+        Location: locationName(wo.locationId) || String(wo.locationId || ''),
+        AssignedTo: assigneeName(wo),
         DueDate: wo.dueDate ? new Date(wo.dueDate).toLocaleDateString() : '',
         CreatedAt: wo.createdAt ? new Date(wo.createdAt).toLocaleString() : '',
-      }));
-    }
-
-    if (exportSection === 'assets') {
-      return (assets || []).map((a) => ({
-        ID: a.id,
-        Name: a.name,
-        Status: a.status,
-        Location: locationName(a.locationId),
-        Category: a.category,
-        SerialNumber: a.serialNumber || '',
-        Model: a.model || '',
-      }));
-    }
-
-    if (exportSection === 'asset_status') {
-      const list = (assetHealthEvents || []).filter((e) => exportInRange(e.timestamp));
-      return list.map((e) => ({
-        Asset: assetName(e.assetId),
-        Status: e.status || '',
-        DowntimeType: e.downtimeType || '',
-        DowntimeReason: e.downtimeReason || '',
-        Timestamp: e.timestamp ? new Date(e.timestamp).toLocaleString() : '',
-      }));
-    }
-
-    if (exportSection === 'parts') {
-      const list = (inventory || []);
-      const filtered = exportForm.includeOnlyRestock
-        ? list.filter((p) => Number(p.currentStock) < Number(p.minStock))
-        : list;
-      return filtered.map((p) => ({
-        ID: p.id,
-        Name: p.name,
-        CurrentStock: p.currentStock,
-        MinStock: p.minStock,
-        Location: p.locationId ? locationName(p.locationId) : '',
-      }));
-    }
-
-    if (exportSection === 'part_transactions') {
-      return [];
-    }
-
-    if (exportSection === 'vendors') {
-      const vendorNames = new Set();
-      for (const a of (assets || [])) {
-        if (a.vendor) vendorNames.add(a.vendor);
-      }
-      const list = [...vendorNames].sort();
-      return list.map((name, idx) => ({
-        ID: `V-${idx + 1}`,
-        Name: name,
       }));
     }
 
@@ -354,11 +423,6 @@ const Reporting = () => {
     const rows = buildExportRows();
     const titleMap = {
       work_orders: 'Work Orders',
-      assets: 'Assets',
-      asset_status: 'Asset Status',
-      parts: 'Parts',
-      part_transactions: 'Part Transactions',
-      vendors: 'Vendors',
     };
     const title = titleMap[exportSection] || 'Export';
 
@@ -382,8 +446,6 @@ const Reporting = () => {
 
   const filteredWorkOrders = useMemo(() => {
     return (apiWorkOrders || []).filter((wo) => {
-      const createdAt = wo.createdAt || wo.startDate || wo.dueDate;
-      if (!inRange(createdAt)) return false;
       if (filters.assignedTo && wo.assigneeId !== filters.assignedTo) return false;
       if (filters.priority && wo.priority !== filters.priority) return false;
       if (filters.dueDate) {
@@ -392,7 +454,26 @@ const Reporting = () => {
       }
       return true;
     });
-  }, [apiWorkOrders, filters, startDate, endDate]);
+  }, [apiWorkOrders, filters]);
+
+  const assigneeOptions = useMemo(() => {
+    const map = new Map();
+
+    for (const u of (users || [])) {
+      const id = String(u?.id ?? '');
+      if (!id) continue;
+      map.set(id, { id, name: String(u?.name ?? '') || id });
+    }
+
+    for (const wo of (apiWorkOrders || [])) {
+      const id = String(wo?.assigneeId ?? '').trim();
+      if (!id) continue;
+      const name = String(wo?.assigneeName ?? '').trim() || map.get(id)?.name || id;
+      map.set(id, { id, name });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [apiWorkOrders, users]);
 
   const derived = useMemo(() => {
     const createdCount = filteredWorkOrders.length;
@@ -422,63 +503,121 @@ const Reporting = () => {
   }, [filteredWorkOrders]);
 
   const chartData = useMemo(() => {
-    const days = [];
-    const d = new Date(startDate);
-    d.setHours(0, 0, 0, 0);
-    while (d <= endDate) {
-      days.push(new Date(d));
-      d.setDate(d.getDate() + 1);
+    const MAX_DAYS = 90;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const chartEventDate = (wo) => {
+      const created = wo?.createdAt ? new Date(wo.createdAt) : null;
+      if (created && !Number.isNaN(created.getTime())) return created;
+      const started = wo?.startDate ? new Date(wo.startDate) : null;
+      if (started && !Number.isNaN(started.getTime())) return started;
+      const due = wo?.dueDate ? new Date(wo.dueDate) : null;
+      if (due && !Number.isNaN(due.getTime()) && due <= today) return due;
+      return null;
+    };
+
+    let maxSeen = null;
+    for (const wo of (filteredWorkOrders || [])) {
+      const created = chartEventDate(wo);
+      const completed = wo.completedAt ? new Date(wo.completedAt) : null;
+      if (created && !Number.isNaN(created.getTime())) {
+        if (!maxSeen || created > maxSeen) maxSeen = created;
+      }
+      if (completed && !Number.isNaN(completed.getTime())) {
+        if (!maxSeen || completed > maxSeen) maxSeen = completed;
+      }
     }
 
-    return days.map((day) => {
-      const dayStart = new Date(day);
-      const dayEnd = new Date(day);
-      dayEnd.setHours(23, 59, 59, 999);
+    const clampEnd = maxSeen ? new Date(maxSeen) : new Date(today);
+    clampEnd.setHours(0, 0, 0, 0);
+    if (clampEnd > today) clampEnd.setTime(today.getTime());
 
-      const created = filteredWorkOrders.filter((wo) => {
-        const c = wo.createdAt ? new Date(wo.createdAt) : null;
-        return c && c >= dayStart && c <= dayEnd;
-      }).length;
+    const clampStart = new Date(clampEnd);
+    clampStart.setTime(clampEnd.getTime() - (MAX_DAYS - 1) * (24 * 60 * 60 * 1000));
 
-      const completed = filteredWorkOrders.filter((wo) => {
-        const c = wo.completedAt ? new Date(wo.completedAt) : null;
-        return c && c >= dayStart && c <= dayEnd;
-      }).length;
+    const dayMs = 24 * 60 * 60 * 1000;
 
-      const preventive = filteredWorkOrders.filter((wo) => {
-        const c = wo.createdAt ? new Date(wo.createdAt) : null;
-        return c && c >= dayStart && c <= dayEnd && wo.workType === 'preventive';
-      }).length;
+    const keyForDate = (d) => {
+      const mm = d.getMonth() + 1;
+      const dd = d.getDate();
+      return `${d.getFullYear()}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+    };
 
-      const reactive = filteredWorkOrders.filter((wo) => {
-        const c = wo.createdAt ? new Date(wo.createdAt) : null;
-        return c && c >= dayStart && c <= dayEnd && wo.workType === 'reactive';
-      }).length;
+    const within = (d) => d >= clampStart && d <= clampEnd;
 
-      const other = filteredWorkOrders.filter((wo) => {
-        const c = wo.createdAt ? new Date(wo.createdAt) : null;
-        return c && c >= dayStart && c <= dayEnd && wo.workType && wo.workType !== 'preventive' && wo.workType !== 'reactive';
-      }).length;
+    const buckets = new Map();
+    const ensure = (key) => {
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          created: 0,
+          completed: 0,
+          preventive: 0,
+          reactive: 0,
+          other: 0,
+          repeating: 0,
+        });
+      }
+      return buckets.get(key);
+    };
 
-      const repeating = filteredWorkOrders.filter((wo) => {
-        const c = wo.createdAt ? new Date(wo.createdAt) : null;
-        return c && c >= dayStart && c <= dayEnd && wo.recurrence && wo.recurrence !== 'does_not_repeat';
-      }).length;
+    for (const wo of (filteredWorkOrders || [])) {
+      const eventDate = chartEventDate(wo);
+      if (eventDate) {
+        const c = new Date(eventDate);
+        if (!Number.isNaN(c.getTime()) && within(c)) {
+          c.setHours(0, 0, 0, 0);
+          const key = keyForDate(c);
+          const b = ensure(key);
+          b.created += 1;
+          if (wo.workType === 'preventive') b.preventive += 1;
+          else if (wo.workType === 'reactive') b.reactive += 1;
+          else if (wo.workType) b.other += 1;
+          if (wo.recurrence && wo.recurrence !== 'does_not_repeat') b.repeating += 1;
+        }
+      }
 
-      const nonRepeating = created - repeating;
+      if (wo.completedAt) {
+        const c = new Date(wo.completedAt);
+        if (!Number.isNaN(c.getTime()) && within(c)) {
+          c.setHours(0, 0, 0, 0);
+          const key = keyForDate(c);
+          const b = ensure(key);
+          b.completed += 1;
+        }
+      }
+    }
 
-      return {
-        date: `${day.getMonth() + 1}/${day.getDate()}`,
-        created,
-        completed,
-        preventive,
-        reactive,
-        other,
-        repeating,
-        nonRepeating,
+    const out = [];
+    const cur = new Date(clampStart);
+    while (cur <= clampEnd) {
+      const key = keyForDate(cur);
+      const b = buckets.get(key) || {
+        created: 0,
+        completed: 0,
+        preventive: 0,
+        reactive: 0,
+        other: 0,
+        repeating: 0,
       };
-    });
-  }, [filteredWorkOrders, startDate, endDate]);
+
+      out.push({
+        date: `${cur.getMonth() + 1}/${cur.getDate()}`,
+        created: b.created,
+        completed: b.completed,
+        preventive: b.preventive,
+        reactive: b.reactive,
+        other: b.other,
+        repeating: b.repeating,
+        nonRepeating: Math.max(0, b.created - b.repeating),
+      });
+
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return out;
+  }, [filteredWorkOrders]);
 
   const donutData = useMemo(() => ([
     { name: 'Open', value: derived.statusCounts.open, color: '#3b82f6' },
@@ -498,14 +637,17 @@ const Reporting = () => {
     { key: 'status', title: 'Status', sortable: true, render: (v) => <Badge variant={v === 'completed' ? 'success' : v === 'in_progress' ? 'info' : v === 'cancelled' ? 'danger' : 'warning'}>{v}</Badge> },
     { key: 'priority', title: 'Priority', sortable: true },
     { key: 'workType', title: 'Work Type', sortable: true },
-    { key: 'assigneeId', title: 'Assigned To', sortable: true, render: (v) => users.find((u) => u.id === v)?.name || '-' },
+    { key: 'assigneeId', title: 'Assigned To', sortable: true, render: (v) => assigneeOptions.find((o) => o.id === v)?.name || '-' },
     { key: 'assetId', title: 'Asset', sortable: true, render: (v) => assets.find((a) => a.id === v)?.name || '-' },
     { key: 'locationId', title: 'Location', sortable: true, render: (v) => locations.find((l) => l.id === v)?.name || '-' },
     { key: 'dueDate', title: 'Due Date', sortable: true, render: (v) => (v ? new Date(v).toLocaleDateString() : '-') },
     { key: 'recurrence', title: 'Recurrence', sortable: true },
-  ]), [users, assets, locations]);
+  ]), [assigneeOptions, assets, locations]);
 
-  const clearFilters = () => setFilters({ assignedTo: '', dueDate: '', priority: '' });
+  const clearFilters = () => {
+    setFilters({ assignedTo: '', dueDate: '', priority: '' });
+    setDateRange(derivedRange);
+  };
 
   return (
     <Stack spacing={2.5}>
@@ -536,7 +678,7 @@ const Reporting = () => {
               onChange={(e) => setFilters((p) => ({ ...p, assignedTo: e.target.value }))}
             >
               <MenuItem value="">Assigned To</MenuItem>
-              {users.map((u) => (
+              {assigneeOptions.map((u) => (
                 <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
               ))}
             </Select>
@@ -577,591 +719,155 @@ const Reporting = () => {
 
       {activeTab !== 'work_orders' ? (
         activeTab === 'export_data' ? (
-          <Stack spacing={2}>
-            <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.3 }}>
-              Export Data
-            </Typography>
 
-            <Tabs
-              value={exportSection}
-              onChange={(_e, v) => setExportSection(v)}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
-            >
-              {[
-                { id: 'work_orders', label: 'Work Orders' },
-                { id: 'assets', label: 'Assets' },
-                { id: 'asset_status', label: 'Asset Status' },
-                { id: 'parts', label: 'Parts' },
-                { id: 'part_transactions', label: 'Part Transactions' },
-                { id: 'vendors', label: 'Vendors' },
-              ].map((t) => (
-                <Tab key={t.id} value={t.id} label={t.label} />
-              ))}
-            </Tabs>
-
-            {exportSection === 'work_orders' ? (
-              <Card>
-                <CardHeader>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      Export Work Order List
-                    </Typography>
-                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
-                      Filters
-                    </Button>
-                  </Stack>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Date Range
-                      </Typography>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.start || dateRange.start}
-                          onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
-                          InputProps={{
-                            startAdornment: (
-                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
-                                <Calendar size={16} />
-                              </Box>
-                            ),
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.end || dateRange.end}
-                          onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {exportDateRangeText}
-                      </Typography>
-                    </Box>
-
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                        <FormControlLabel value="pdf" control={<Radio size="small" />} label="PDF" />
-                      </RadioGroup>
-                    </FormControl>
-
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Work Orders to include in this date range</FormLabel>
-                      <FormGroup>
-                        <FormControlLabel
-                          control={(
-                            <Checkbox
-                              size="small"
-                              checked={exportForm.includePlannedOrCreated}
-                              onChange={(e) => setExportForm((p) => ({ ...p, includePlannedOrCreated: e.target.checked }))}
-                            />
-                          )}
-                          label="Planned or Created"
-                        />
-                        <FormControlLabel
-                          control={(
-                            <Checkbox
-                              size="small"
-                              checked={exportForm.includeDue}
-                              onChange={(e) => setExportForm((p) => ({ ...p, includeDue: e.target.checked }))}
-                            />
-                          )}
-                          label="Due"
-                        />
-                        <FormControlLabel
-                          control={(
-                            <Checkbox
-                              size="small"
-                              checked={exportForm.includeCompleted}
-                              onChange={(e) => setExportForm((p) => ({ ...p, includeCompleted: e.target.checked }))}
-                            />
-                          )}
-                          label="Completed"
-                        />
-                      </FormGroup>
-                    </FormControl>
-
-                    <FormControl size="small" sx={{ maxWidth: 320 }}>
-                      <FormLabel sx={{ fontWeight: 700 }}>Procedure Format</FormLabel>
-                      <Select
-                        value={exportForm.procedureFormat}
-                        onChange={(e) => setExportForm((p) => ({ ...p, procedureFormat: e.target.value }))}
-                      >
-                        <MenuItem value="summary">Summary</MenuItem>
-                        <MenuItem value="full">Full</MenuItem>
-                        <MenuItem value="none">None</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'id', label: 'ID' },
-                              { key: 'title', label: 'Title' },
-                              { key: 'status', label: 'Status' },
-                              { key: 'priority', label: 'Priority' },
-                              { key: 'asset', label: 'Asset' },
-                              { key: 'location', label: 'Location' },
-                              { key: 'assignee', label: 'Assigned To' },
-                              { key: 'dueDate', label: 'Due Date' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Preview would be implemented here.')}>Preview</Button>
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </CardBody>
-              </Card>
-            ) : exportSection === 'assets' ? (
-              <Card>
-                <CardHeader>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      Export Asset List
-                    </Typography>
-                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
-                      Filters
-                    </Button>
-                  </Stack>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                        <FormControlLabel value="qr_pdf" control={<Radio size="small" />} label="QR Codes (PDF)" />
-                      </RadioGroup>
-                    </FormControl>
-
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'id', label: 'ID' },
-                              { key: 'name', label: 'Name' },
-                              { key: 'status', label: 'Status' },
-                              { key: 'location', label: 'Location' },
-                              { key: 'category', label: 'Category' },
-                              { key: 'serialNumber', label: 'Serial Number' },
-                              { key: 'model', label: 'Model' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </CardBody>
-              </Card>
-            ) : exportSection === 'asset_status' ? (
-              <Card>
-                <CardHeader>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      Export Asset Status List
-                    </Typography>
-                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
-                      Filters
-                    </Button>
-                  </Stack>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Date Range
-                      </Typography>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.start || dateRange.start}
-                          onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
-                          InputProps={{
-                            startAdornment: (
-                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
-                                <Calendar size={16} />
-                              </Box>
-                            ),
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.end || dateRange.end}
-                          onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {exportDateRangeText}
-                      </Typography>
-                    </Box>
-
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                      </RadioGroup>
-                    </FormControl>
-
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'asset', label: 'Asset' },
-                              { key: 'status', label: 'Status' },
-                              { key: 'downtimeType', label: 'Downtime Type' },
-                              { key: 'downtimeReason', label: 'Downtime Reason' },
-                              { key: 'timestamp', label: 'Timestamp' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </CardBody>
-              </Card>
-            ) : exportSection === 'parts' ? (
-              <Card>
-                <CardHeader>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      Export Part List
-                    </Typography>
-                    <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
-                      Filters
-                    </Button>
-                  </Stack>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                        <FormControlLabel value="qr_pdf" control={<Radio size="small" />} label="QR Codes (PDF)" />
-                      </RadioGroup>
-                    </FormControl>
-
-                    <FormControl>
-                      <FormGroup>
-                        <FormControlLabel
-                          control={(
-                            <Checkbox
-                              size="small"
-                              checked={exportForm.includeOnlyRestock}
-                              onChange={(e) => setExportForm((p) => ({ ...p, includeOnlyRestock: e.target.checked }))}
-                            />
-                          )}
-                          label="Include only Parts that need restock"
-                        />
-                      </FormGroup>
-                    </FormControl>
-
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'id', label: 'ID' },
-                              { key: 'name', label: 'Name' },
-                              { key: 'stock', label: 'Current Stock' },
-                              { key: 'minStock', label: 'Min Stock' },
-                              { key: 'location', label: 'Location' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </CardBody>
-              </Card>
-            ) : exportSection === 'part_transactions' ? (
-              <Card>
-                <CardHeader>
+          <Card>
+            <CardHeader>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Export Work Order List
+                </Typography>
+                <Button type="button" variant="outlined" color="inherit" size="small" startIcon={<Filter size={16} />}>
+                  Filters
+                </Button>
+              </Stack>
+            </CardHeader>
+            <CardBody>
+              <Stack spacing={3} sx={{ maxWidth: 720 }}>
+                <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    Part Transactions
+                    Date Range
                   </Typography>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Date Range
-                      </Typography>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.start || dateRange.start}
-                          onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
-                          InputProps={{
-                            startAdornment: (
-                              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
-                                <Calendar size={16} />
-                              </Box>
-                            ),
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={exportForm.end || dateRange.end}
-                          onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {exportDateRangeText}
-                      </Typography>
-                    </Box>
-
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                      </RadioGroup>
-                    </FormControl>
-
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'part', label: 'Part' },
-                              { key: 'type', label: 'Transaction Type' },
-                              { key: 'qty', label: 'Quantity' },
-                              { key: 'date', label: 'Date' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
-
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                    <TextField
+                      size="small"
+                      type="date"
+                      value={exportForm.start || dateRange.start}
+                      onChange={(e) => setExportForm((p) => ({ ...p, start: e.target.value }))}
+                      InputProps={{
+                        startAdornment: (
+                          <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                            <Calendar size={16} />
+                          </Box>
+                        ),
+                      }}
+                    />
+                    <TextField
+                      size="small"
+                      type="date"
+                      value={exportForm.end || dateRange.end}
+                      onChange={(e) => setExportForm((p) => ({ ...p, end: e.target.value }))}
+                    />
                   </Stack>
-                </CardBody>
-              </Card>
-            ) : exportSection === 'vendors' ? (
-              <Card>
-                <CardHeader>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    Export Vendor List
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                    {exportDateRangeText}
                   </Typography>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3} sx={{ maxWidth: 720 }}>
-                    <FormControl>
-                      <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
-                      <RadioGroup
-                        row
-                        value={exportForm.format}
-                        onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
-                      >
-                        <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
-                      </RadioGroup>
-                    </FormControl>
+                </Box>
 
-                    <Box>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        color="inherit"
-                        onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
-                        endIcon={<ChevronDown size={18} />}
-                      >
-                        Columns
-                      </Button>
-                      <Collapse in={exportForm.columnsOpen}>
-                        <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
-                          <FormGroup>
-                            {[
-                              { key: 'id', label: 'ID' },
-                              { key: 'name', label: 'Name' },
-                              { key: 'email', label: 'Email' },
-                              { key: 'phone', label: 'Phone' },
-                            ].map((c) => (
-                              <FormControlLabel
-                                key={c.key}
-                                control={<Checkbox defaultChecked size="small" />}
-                                label={c.label}
-                              />
-                            ))}
-                          </FormGroup>
-                        </Paper>
-                      </Collapse>
-                    </Box>
+                <FormControl>
+                  <FormLabel sx={{ fontWeight: 700 }}>Export Format</FormLabel>
+                  <RadioGroup
+                    row
+                    value={exportForm.format}
+                    onChange={(e) => setExportForm((p) => ({ ...p, format: e.target.value }))}
+                  >
+                    <FormControlLabel value="csv" control={<Radio size="small" />} label="CSV (Excel)" />
+                    <FormControlLabel value="pdf" control={<Radio size="small" />} label="PDF" />
+                  </RadioGroup>
+                </FormControl>
 
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
-                      <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
-                        Export
-                      </Button>
-                    </Stack>
+                <FormControl>
+                  <FormLabel sx={{ fontWeight: 700 }}>Work Orders to include in this date range</FormLabel>
+                  <FormGroup>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={exportForm.includePlannedOrCreated}
+                          onChange={(e) => setExportForm((p) => ({ ...p, includePlannedOrCreated: e.target.checked }))}
+                        />
+                      }
+                      label="Planned or Created"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={exportForm.includeDue}
+                          onChange={(e) => setExportForm((p) => ({ ...p, includeDue: e.target.checked }))}
+                        />
+                      }
+                      label="Due"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={exportForm.includeCompleted}
+                          onChange={(e) => setExportForm((p) => ({ ...p, includeCompleted: e.target.checked }))}
+                        />
+                      }
+                      label="Completed"
+                    />
+                  </FormGroup>
+                </FormControl>
+
+                <FormControl size="small" sx={{ maxWidth: 320 }}>
+                  <FormLabel sx={{ fontWeight: 700 }}>Procedure Format</FormLabel>
+                  <Select
+                    value={exportForm.procedureFormat}
+                    onChange={(e) => setExportForm((p) => ({ ...p, procedureFormat: e.target.value }))}
+                  >
+                    <MenuItem value="summary">Summary</MenuItem>
+                    <MenuItem value="full">Full</MenuItem>
+                    <MenuItem value="none">None</MenuItem>
+                  </Select>
+                </FormControl>
+
+                  <Box>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      color="inherit"
+                      onClick={() => setExportForm((p) => ({ ...p, columnsOpen: !p.columnsOpen }))}
+                      endIcon={<ChevronDown size={18} />}
+                    >
+                      Columns
+                    </Button>
+                    <Collapse in={exportForm.columnsOpen}>
+                      <Paper variant="outlined" sx={{ mt: 1.5, p: 1.5 }}>
+                        <FormGroup>
+                          {[
+                            { key: 'id', label: 'ID' },
+                            { key: 'title', label: 'Title' },
+                            { key: 'status', label: 'Status' },
+                            { key: 'priority', label: 'Priority' },
+                            { key: 'asset', label: 'Asset' },
+                            { key: 'location', label: 'Location' },
+                            { key: 'assignee', label: 'Assigned To' },
+                            { key: 'dueDate', label: 'Due Date' },
+                            { key: 'createdAt', label: 'Created At' },
+                          ].map((c) => (
+                            <FormControlLabel
+                              key={c.key}
+                              control={<Checkbox defaultChecked size="small" />}
+                              label={c.label}
+                            />
+                          ))}
+                        </FormGroup>
+                      </Paper>
+                    </Collapse>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                    <Button type="button" variant="text" onClick={() => alert('Preview would be implemented here.')}>Preview</Button>
+                    <Button type="button" variant="text" onClick={() => alert('Schedule would be implemented here.')}>Schedule</Button>
+                    <Button variant="contained" onClick={handleExport} startIcon={<Download size={18} />}>
+                      Export
+                    </Button>
                   </Stack>
-                </CardBody>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {[
-                      { id: 'assets', label: 'Assets' },
-                      { id: 'asset_status', label: 'Asset Status' },
-                      { id: 'parts', label: 'Parts' },
-                      { id: 'part_transactions', label: 'Part Transactions' },
-                      { id: 'vendors', label: 'Vendors' },
-                    ].find((x) => x.id === exportSection)?.label}
-                  </Typography>
-                </CardHeader>
-                <CardBody>
-                  <Typography variant="body2" color="text.secondary">
-                    Send the screenshots for this export section and I’ll match it exactly like Work Orders.
-                  </Typography>
-                </CardBody>
-              </Card>
-            )}
-          </Stack>
+                </Stack>
+              </CardBody>
+            </Card>
         ) : null
       ) : (
         <Stack spacing={2.5}>

@@ -81,6 +81,8 @@ const TeamsUsers = () => {
   useEffect(() => {
     if (tab !== 'users') return;
     fetchUsers();
+    fetchTeams();
+    fetchTeamUserLinks();
   }, [tab]);
 
   const fetchTeams = async () => {
@@ -269,6 +271,32 @@ const TeamsUsers = () => {
       return name.includes(q) || role.includes(q);
     });
   }, [users, search]);
+
+  const userTeamsMap = useMemo(() => {
+    const teamNameById = new Map();
+    for (const t of (teams || [])) {
+      const id = String(t?.id ?? '');
+      if (!id) continue;
+      teamNameById.set(id, String(t?.team_name ?? '') || id);
+    }
+
+    const map = new Map();
+    for (const link of (teamUserLinks || [])) {
+      const userId = String(link?.user_id ?? '');
+      const teamId = String(link?.team_id ?? '');
+      if (!userId || !teamId) continue;
+      const list = map.get(userId) || [];
+      const name = teamNameById.get(teamId) || teamId;
+      if (!list.includes(name)) list.push(name);
+      map.set(userId, list);
+    }
+
+    for (const [userId, list] of map.entries()) {
+      map.set(userId, (list || []).slice().sort((a, b) => String(a).localeCompare(String(b))));
+    }
+
+    return map;
+  }, [teamUserLinks, teams]);
 
   const openCreateUser = () => {
     setUserMode('create');
@@ -487,20 +515,19 @@ const TeamsUsers = () => {
                   <TableCell>Full Name</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Teams</TableCell>
-                  <TableCell>Last Visit</TableCell>
                   <TableCell align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loadingUsers ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={4}>
                       <Typography variant="body2" color="text.secondary">Loading users…</Typography>
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={4}>
                       <Typography variant="body2" color="text.secondary">No users found.</Typography>
                     </TableCell>
                   </TableRow>
@@ -518,8 +545,9 @@ const TeamsUsers = () => {
                         </Stack>
                       </TableCell>
                       <TableCell>{u?.role || ''}</TableCell>
-                      <TableCell />
-                      <TableCell />
+                      <TableCell>
+                        {(userTeamsMap.get(String(u?.id ?? '')) || []).join(', ')}
+                      </TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} justifyContent="flex-end">
                           <MuiButton size="small" variant="text" onClick={() => openEditUser(u)}>

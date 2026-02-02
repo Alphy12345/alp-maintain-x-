@@ -979,14 +979,28 @@ const WorkOrders = () => {
       });
     }
 
-    const monthStart = new Date(calendarAnchorDate.getFullYear(), calendarAnchorDate.getMonth(), 1);
-    const gridStart = startOfWeekMonday(monthStart);
-    return Array.from({ length: 42 }, (_v, i) => {
-      const d = new Date(gridStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
+    const year = calendarAnchorDate.getFullYear();
+    const month = calendarAnchorDate.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: lastDay }, (_v, i) => new Date(year, month, i + 1));
   }, [calendarAnchorDate, calendarMode]);
+
+  const calendarMonthLeadingBlanks = useMemo(() => {
+    if (calendarMode !== 'month') return 0;
+    const year = calendarAnchorDate.getFullYear();
+    const month = calendarAnchorDate.getMonth();
+    const first = new Date(year, month, 1);
+    const jsDow = first.getDay();
+    // Monday-first index: Mon=0..Sun=6
+    return (jsDow + 6) % 7;
+  }, [calendarAnchorDate, calendarMode]);
+
+  const calendarMonthTrailingBlanks = useMemo(() => {
+    if (calendarMode !== 'month') return 0;
+    const total = calendarMonthLeadingBlanks + (Array.isArray(calendarDays) ? calendarDays.length : 0);
+    const rem = total % 7;
+    return rem === 0 ? 0 : (7 - rem);
+  }, [calendarDays, calendarMode, calendarMonthLeadingBlanks]);
 
   const workOrdersByDay = useMemo(() => {
     const map = new Map();
@@ -2181,17 +2195,22 @@ const WorkOrders = () => {
 
       {viewMode === 'calendar' ? (
         <Paper variant="outlined" sx={{ overflow: 'hidden', position: 'relative' }}>
-          <Grid container columns={7} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
-            {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((d) => (
-              <Grid item xs={1} key={d} sx={{ px: 1.5, py: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.06em' }}>
-                  {d}
-                </Typography>
-              </Grid>
-            ))}
-          </Grid>
-
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            {calendarMode === 'month'
+              ? Array.from({ length: calendarMonthLeadingBlanks }).map((_v, i) => (
+                <Box
+                  key={`cal-blank-start-${i}`}
+                  sx={{
+                    minHeight: 140,
+                    borderRight: 1,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    p: 1.5,
+                    bgcolor: 'background.paper',
+                  }}
+                />
+              ))
+              : null}
             {calendarDays.map((d) => {
               const key = dayKey(d);
               const items = workOrdersByDay.get(key) || [];
@@ -2219,13 +2238,31 @@ const WorkOrders = () => {
                     transition: 'background-color 150ms ease',
                   }}
                 >
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography
-                      variant="caption"
-                      sx={{ fontWeight: 800, color: isToday ? 'primary.main' : (inMonth ? 'text.primary' : 'text.disabled') }}
-                    >
-                      {d.getDate()}
-                    </Typography>
+                  <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+                    <Stack spacing={0} sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 900,
+                          lineHeight: 1.1,
+                          color: isToday ? 'primary.main' : (inMonth ? 'text.primary' : 'text.disabled'),
+                        }}
+                      >
+                        {d.getDate()}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: 800,
+                          lineHeight: 1.1,
+                          color: inMonth ? 'text.secondary' : 'text.disabled',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
+                        {d.toLocaleDateString(undefined, { weekday: 'short' })}
+                      </Typography>
+                    </Stack>
                     {items.length > 0 ? (
                       <Typography variant="caption" color="text.secondary">
                         {items.length}
@@ -2323,7 +2360,7 @@ const WorkOrders = () => {
                         }}
                         variant="text"
                         size="small"
-                        sx={{ justifyContent: 'flex-start', px: 1 }}
+                        sx={{ alignSelf: 'flex-start', px: 0, minWidth: 0 }}
                       >
                         +{hiddenItems.length} more
                       </MuiButton>
@@ -2332,6 +2369,22 @@ const WorkOrders = () => {
                 </Box>
               );
             })}
+
+            {calendarMode === 'month'
+              ? Array.from({ length: calendarMonthTrailingBlanks }).map((_v, i) => (
+                <Box
+                  key={`cal-blank-end-${i}`}
+                  sx={{
+                    minHeight: 140,
+                    borderRight: 1,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    p: 1.5,
+                    bgcolor: 'background.paper',
+                  }}
+                />
+              ))
+              : null}
           </Box>
 
           {dragUi?.active ? (
@@ -2356,9 +2409,16 @@ const WorkOrders = () => {
           ) : null}
         </Paper>
       ) : (
-        <Grid container spacing={2}>
-          <Grid item xs={12} lg={4}>
-            <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+        <Grid
+          container
+          spacing={2}
+          sx={{
+            height: { xs: 'auto', lg: 'calc(100vh - 280px)' },
+            overflow: { xs: 'visible', lg: 'hidden' },
+          }}
+        >
+          <Grid item xs={12} lg={4} sx={{ height: { xs: 'auto', lg: '100%' } }}>
+            <Paper variant="outlined" sx={{ overflow: 'hidden', height: { xs: 'auto', lg: '100%' } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
                   {activeTab === 'done' ? 'Done' : 'To Do'} ({filteredWorkOrders.length})
@@ -2366,7 +2426,14 @@ const WorkOrders = () => {
               </Stack>
               <Divider />
 
-              <Box sx={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              <Box
+                sx={{
+                  maxHeight: { xs: '65vh', lg: 'calc(100% - 52px)' },
+                  overflowY: 'hidden',
+                  overscrollBehavior: 'contain',
+                  '&:hover': { overflowY: 'auto' },
+                }}
+              >
                 {loading ? (
                   <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 2 }}>
                     <CircularProgress size={18} />
@@ -2431,8 +2498,8 @@ const WorkOrders = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} lg={8}>
-            <Paper ref={workOrderDetailsRef} variant="outlined" sx={{ overflow: 'hidden' }}>
+          <Grid item xs={12} lg={8} sx={{ height: { xs: 'auto', lg: '100%' } }}>
+            <Paper ref={workOrderDetailsRef} variant="outlined" sx={{ overflow: 'hidden', height: { xs: 'auto', lg: '100%' } }}>
               {!selectedWorkOrder ? (
                 <Stack sx={{ minHeight: '65vh', p: 4 }} alignItems="center" justifyContent="center" spacing={1}>
                   <Typography variant="body2" sx={{ fontWeight: 800 }}>
@@ -2443,7 +2510,7 @@ const WorkOrders = () => {
                   </Typography>
                 </Stack>
               ) : (
-                <Box sx={{ p: 3 }}>
+                <Box sx={{ p: 3, height: { xs: 'auto', lg: '100%' }, overflowY: { xs: 'visible', lg: 'auto' } }}>
                   <Stack spacing={3}>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} justifyContent="space-between">
                       <Box sx={{ minWidth: 0 }}>
@@ -2501,7 +2568,7 @@ const WorkOrders = () => {
                     </Box>
 
                     <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                      <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                      <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>General</Typography>
                       </Box>
                       <Box sx={{ p: 2 }}>
@@ -2643,7 +2710,7 @@ const WorkOrders = () => {
 
                     {selectedWorkOrder.checklist && selectedWorkOrder.checklist.length > 0 && (
                       <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                        <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50' }}>
+                        <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.paper' }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Checklist</Typography>
                         </Box>
                         <Box sx={{ p: 2 }}>

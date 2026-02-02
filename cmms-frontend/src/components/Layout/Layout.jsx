@@ -19,7 +19,16 @@ const Layout = ({ children }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
         <TopBar />
 
-        <Box component="main" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            pt: { xs: '72px', sm: '72px' },
+            p: { xs: 2, sm: 3 },
+          }}
+        >
           {children}
         </Box>
       </Box>

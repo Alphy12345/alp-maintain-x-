@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, useMediaQuery } from '@mui/material';
+import { Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Typography, useMediaQuery } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -53,6 +53,9 @@ const Sidebar = () => {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', height: 64, px: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 900, letterSpacing: 1 }}>
+          CMTI
+        </Typography>
         <Box sx={{ flexGrow: 1 }} />
         {!isLgUp ? (
           <IconButton onClick={toggleSidebar} aria-label="close sidebar">
